@@ -1,0 +1,28 @@
+name: GeM 24x7 Cloud BidWatch Monitor
+
+on:
+  schedule:
+    # Runs automatically on GitHub Cloud 24/7 without needing any laptop or server
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  check-gem-bids:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Run GeM BidWatch Scanner
+        run: |
+          python backend/poll_and_alert.py
