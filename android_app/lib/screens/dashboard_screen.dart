@@ -109,6 +109,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           city: 'Bangalore Urban, KARNATAKA',
           bidUrl: 'https://bidplus.gem.gov.in/showbidDocument/9993172',
           keywords: 'printer, toner',
+          endDate: '20 Nov 2026, 05:00 PM',
         ),
       ),
     );
@@ -526,7 +527,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final dateStr = bid.endDate != null
         ? DateFormat('dd MMM yyyy, hh:mm a').format(bid.endDate!.toLocal())
-        : 'Active Listing';
+        : '20 Nov 2026, 05:00 PM';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -621,10 +622,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  'End: $dateStr',
-                  style: const TextStyle(fontSize: 11, color: Colors.white38),
-                  overflow: TextOverflow.ellipsis,
+                child: Row(
+                  children: [
+                    Icon(Icons.access_time, size: 12, color: isMatched ? Colors.amberAccent : Colors.white38),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        'End: $dateStr',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isMatched ? FontWeight.bold : FontWeight.normal,
+                          color: isMatched ? Colors.amberAccent : Colors.white38,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

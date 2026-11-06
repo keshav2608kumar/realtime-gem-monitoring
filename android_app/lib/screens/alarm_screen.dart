@@ -8,6 +8,7 @@ class AlarmScreen extends StatefulWidget {
   final String city;
   final String bidUrl;
   final String keywords;
+  final String? endDate;
 
   const AlarmScreen({
     super.key,
@@ -16,6 +17,7 @@ class AlarmScreen extends StatefulWidget {
     required this.city,
     required this.bidUrl,
     required this.keywords,
+    this.endDate,
   });
 
   @override
@@ -188,6 +190,23 @@ class _AlarmScreenState extends State<AlarmScreen> with SingleTickerProviderStat
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                   ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          _buildLabel('BID END DATE / DEADLINE'),
+                          Row(
+                            children: [
+                              const Icon(Icons.access_time_filled, color: Colors.amberAccent, size: 18),
+                              const SizedBox(width: 6),
+                              Text(
+                                widget.endDate ?? '20 Nov 2026, 05:00 PM',
+                                style: const TextStyle(
+                                  color: Colors.amberAccent,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ],

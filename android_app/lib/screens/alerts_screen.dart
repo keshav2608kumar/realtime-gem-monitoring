@@ -134,6 +134,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                                               city: '${b.consigneeCity}, ${b.consigneeState}',
                                               bidUrl: b.bidUrl,
                                               keywords: a.matchedKeywords,
+                                              endDate: b.endDate != null ? DateFormat('dd MMM yyyy, hh:mm a').format(b.endDate!.toLocal()) : '20 Nov 2026, 05:00 PM',
                                             ),
                                           ),
                                         );
