@@ -1,0 +1,80 @@
+name: Build GeM BidWatch Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'android_app/**'
+      - '.github/workflows/build_apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+          cache: true
+
+      - name: Generate Android Scaffolding if missing
+        run: |
+          cd android_app
+          flutter create . --org com.gembidwatch --project-name gem_bidwatch_app
+
+      - name: Install Dependencies
+        run: |
+          cd android_app
+          flutter pub get
+
+      - name: Build Release APK
+        run: |
+          cd android_app
+          flutter build apk --release --no-tree-shake-icons
+
+      - name: Rename APK for Easy Download
+        run: |
+          cp android_app/build/app/outputs/flutter-apk/app-release.apk android_app/build/app/outputs/flutter-apk/GeM_BidWatch.apk
+
+      - name: Upload APK as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GeM_BidWatch_App
+          path: android_app/build/app/outputs/flutter-apk/GeM_BidWatch.apk
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: "GeM BidWatch v1.0.0 (Android APK)"
+          body: |
+            ## 📱 GeM BidWatch v1.0.0 Android APK
+
+            24/7 Cloud GeM Bid Monitoring with Loud Alarm-Style Android Alerts.
+
+            ### Installation Steps:
+            1. Download **`GeM_BidWatch.apk`** below on your Android phone.
+            2. Open the downloaded file and tap **Install** (Allow *Install from Unknown Sources* if prompted).
+            3. Open the app > Go to **Settings** > Verify Server URL:
+               `https://realtime-gem-monitoring.onrender.com`
+            4. **Important**: Go to Android Settings > Apps > GeM BidWatch > Battery > Set to **"Unrestricted"** so alarms ring even when your phone is locked.
+          files: android_app/build/app/outputs/flutter-apk/GeM_BidWatch.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
