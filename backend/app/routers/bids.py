@@ -45,8 +45,13 @@ def batch_sync_bids(bids: List[BidCreate], db: Session = Depends(get_db)):
     profiles = db.query(Profile).filter(Profile.is_active == True).all()
     inserted_count = 0
     alerts_created = 0
+    seen_in_batch = set()
 
     for bid_data in bids:
+        if bid_data.gem_bid_id in seen_in_batch:
+            continue
+        seen_in_batch.add(bid_data.gem_bid_id)
+
         existing = db.query(Bid).filter(Bid.gem_bid_id == bid_data.gem_bid_id).first()
         if existing:
             db_bid = existing

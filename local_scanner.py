@@ -75,6 +75,7 @@ def run_scanner_cycle(session: GemSession, fetcher: GemFetcher):
     cities = ["BANGALORE", "Bangalore Urban", "BENGALURU URBAN", "Bengaluru"]
     keywords = ["toner", "cartridge", "printer", "ink"]
     all_normalized_bids = []
+    seen_ids = set()
     matched_tenders = []
 
     for city in cities:
@@ -83,8 +84,9 @@ def run_scanner_cycle(session: GemSession, fetcher: GemFetcher):
             print(f"  [{city}]: Found {len(raw_bids)} recent tender(s)")
             for raw in raw_bids:
                 bid = normalize_bid(raw)
-                if not bid:
+                if not bid or bid.gem_bid_id in seen_ids:
                     continue
+                seen_ids.add(bid.gem_bid_id)
                 all_normalized_bids.append(bid)
 
                 # Check keyword match

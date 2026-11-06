@@ -379,37 +379,66 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
     // --- LOAD DATA FROM CLOUD REST API ---
     async function loadAllData() {
+      // 1. Health
       try {
-        // 1. Health
         const hRes = await fetch('/health/');
         if (hRes.ok) {
           const h = await hRes.json();
-          document.getElementById('statHealth').textContent = h.monitor_running ? '24/7 Active' : 'Paused';
-          document.getElementById('statBidsCount').textContent = `${h.total_bids_in_db || 0} Tracked in DB`;
+          const elHealth = document.getElementById('statHealth');
+          if (elHealth) elHealth.textContent = h.monitor_running ? '24/7 Active' : 'Paused';
+          const elBidsCount = document.getElementById('statBidsCount');
+          if (elBidsCount) elBidsCount.textContent = `${h.total_bids_in_db || 0} Tracked in DB`;
         }
+      } catch (e) {
+        console.warn('Health fetch error:', e);
+      }
 
-        // 2. Profiles
+      // 2. Profiles
+      try {
         const pRes = await fetch('/profiles/');
         if (pRes.ok) {
           const profiles = await pRes.json();
           renderProfiles(profiles);
         }
+      } catch (e) {
+        console.warn('Profiles fetch error:', e);
+      }
 
-        // 3. Alerts
+      // 3. Alerts
+      try {
         const aRes = await fetch('/alerts/?limit=100');
         if (aRes.ok) {
           const alerts = await aRes.json();
-          document.getElementById('statAlerts').textContent = alerts.length;
+          const elAlerts = document.getElementById('statAlerts');
+          if (elAlerts) elAlerts.textContent = alerts.length;
         }
+      } catch (e) {
+        console.warn('Alerts fetch error:', e);
+      }
 
-        // 4. Bids
+      // 4. Bids (Guaranteed execution — never stuck on Connecting!)
+      try {
         const bRes = await fetch('/bids/?limit=100');
         if (bRes.ok) {
           allBids = await bRes.json();
           renderBids(allBids);
+        } else {
+          throw new Error('HTTP ' + bRes.status);
         }
       } catch (e) {
-        console.error("Data load error:", e);
+        console.error('Bids fetch error:', e);
+        const tbody = document.getElementById('bidsTableBody');
+        if (tbody) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="5" class="py-14 text-center text-slate-400">
+                <i class="fa-solid fa-cloud-arrow-down text-2xl text-amber-400 mb-2 block"></i>
+                <p class="font-bold text-slate-200">Syncing with Live GeM Cloud...</p>
+                <p class="text-xs text-slate-500 mt-1">Re-querying server in a few seconds or click "Scan GeM Now".</p>
+              </td>
+            </tr>
+          `;
+        }
       }
     }
 
@@ -471,7 +500,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         container.innerHTML = `<p class="text-xs text-slate-500">No active rules configured.</p>`;
         return;
       }
-      container.innerHTML = profiles.map(p => `
+      container.innerHTML = profiles.map(p => {
+        const citiesList = Array.isArray(p.cities) ? p.cities : (p.cities ? [p.cities] : ['All Cities']);
+        const keywordsList = Array.isArray(p.keywords) ? p.keywords : (p.keywords ? [p.keywords] : []);
+        return `
         <div class="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div class="space-y-2">
             <div class="flex items-center gap-2">
@@ -481,18 +513,19 @@ DASHBOARD_HTML = """<!DOCTYPE html>
               </span>
             </div>
             <p class="text-xs text-slate-400">
-              <strong>State:</strong> <span class="text-slate-200">${p.state}</span> &bull; 
-              <strong>Cities:</strong> <span class="text-slate-200">${p.cities.join(', ')}</span>
+              <strong>State:</strong> <span class="text-slate-200">${escapeHtml(p.state || 'All')}</span> &bull; 
+              <strong>Cities:</strong> <span class="text-slate-200">${escapeHtml(citiesList.join(', '))}</span>
             </p>
             <div class="flex flex-wrap gap-1.5 pt-1">
-              ${p.keywords.map(k => `<span class="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">${k}</span>`).join('')}
+              ${keywordsList.map(k => `<span class="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">${escapeHtml(k)}</span>`).join('')}
             </div>
           </div>
           <div class="text-xs text-slate-400 font-mono">
-            Interval: <strong class="text-slate-200">${p.poll_interval_seconds}s</strong>
+            Interval: <strong class="text-slate-200">${p.poll_interval_seconds || 300}s</strong>
           </div>
         </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     function setKeywordFilter(kw) {
