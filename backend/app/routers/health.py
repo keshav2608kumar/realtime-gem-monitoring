@@ -49,3 +49,35 @@ def trigger_manual_poll(background_tasks: BackgroundTasks):
     from app.workers.monitor_worker import poll_all_active_profiles
     background_tasks.add_task(poll_all_active_profiles)
     return {"message": "Manual poll triggered in background"}
+
+
+@router.get("/debug-gem")
+def debug_gem_connection():
+    """Diagnose direct connectivity from this cloud server to GeM portal."""
+    import traceback
+    from app.gem import GemSession, GemFetcher
+
+    results = {}
+    try:
+        session = GemSession()
+        session.refresh()
+        results["csrf_obtained"] = bool(session._csrf_token)
+        results["csrf_preview"] = session._csrf_token[:8] if session._csrf_token else None
+    except Exception as e:
+        results["session_refresh_error"] = str(e)
+        results["session_refresh_trace"] = traceback.format_exc()
+        return results
+
+    try:
+        fetcher = GemFetcher(session)
+        bids, total = fetcher.fetch_bids_by_location(state="KARNATAKA", city="BANGALORE", page=1)
+        results["search_bids_total"] = total
+        results["search_bids_page1_count"] = len(bids)
+        if bids:
+            results["sample_bid_number"] = bids[0].get("b_bid_number")
+            results["sample_category"] = bids[0].get("b_category_name")
+    except Exception as e:
+        results["search_bids_error"] = str(e)
+        results["search_bids_trace"] = traceback.format_exc()
+
+    return results
