@@ -5,8 +5,8 @@ import '../models/models.dart';
 
 class ApiService {
   static const String _keyBaseUrl = 'gem_api_base_url';
-  // Default emulator host; can be changed in App Settings to cloud URL or local IP
-  static const String _defaultUrl = 'http://10.0.2.2:8000';
+  // Default to live 24/7 Render cloud instance
+  static const String _defaultUrl = 'https://realtime-gem-monitoring.onrender.com';
 
   static Future<String> getBaseUrl() async {
     final prefs = await SharedPreferences.getInstance();

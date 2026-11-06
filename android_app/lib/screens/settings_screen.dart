@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 import '../services/alarm_service.dart';
+import 'alarm_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -144,6 +145,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: const Text('Silence'),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.redAccent,
+                        side: const BorderSide(color: Colors.redAccent),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const AlarmScreen(
+                              bidNumber: 'GEM/2026/B/8123875',
+                              category: 'Computer Printer (V2) / Toner Cartridge',
+                              city: 'Bangalore Urban, KARNATAKA',
+                              bidUrl: 'https://bidplus.gem.gov.in/showbidDocument/8123875',
+                              keywords: 'printer, toner',
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.emergency, color: Colors.redAccent),
+                      label: const Text('Preview Red Alert Screen (UI & Sound)'),
+                    ),
                   ),
                 ],
               ),
