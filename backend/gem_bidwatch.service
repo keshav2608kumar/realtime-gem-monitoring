@@ -1,0 +1,17 @@
+[Unit]
+Description=GeM BidWatch 24/7 Monitoring Server
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/gem_bidwatch/backend
+Environment="PATH=/home/ubuntu/gem_bidwatch/backend/venv/bin"
+ExecStart=/home/ubuntu/gem_bidwatch/backend/venv/bin/python run_server.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

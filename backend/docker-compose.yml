@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  gem_bidwatch:
+    build: .
+    container_name: gem_bidwatch_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8000
+      - DATABASE_URL=sqlite:///./data/gem_bidwatch.db
+      - GEM_POLL_INTERVAL_SECONDS=300
+      - MONITOR_ENABLED=true
+      - FIREBASE_SERVICE_ACCOUNT_PATH=/app/data/firebase_service_account.json
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

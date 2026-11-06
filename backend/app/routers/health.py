@@ -1,0 +1,51 @@
+"""
+Health Router — System status, monitor health, manual poll trigger
+"""
+from fastapi import APIRouter, Depends, BackgroundTasks
+from sqlalchemy.orm import Session
+from sqlalchemy import desc
+from typing import List
+
+from app.database import get_db
+from app.models import Profile, Bid, Alert, MonitorHealth
+from app.schemas import HealthOut, SystemStatus
+from app.workers.scheduler import get_scheduler_status
+
+router = APIRouter(prefix="/health", tags=["Health"])
+
+
+@router.get("/", response_model=SystemStatus)
+def get_system_status(db: Session = Depends(get_db)):
+    total_profiles = db.query(Profile).count()
+    active_profiles = db.query(Profile).filter(Profile.is_active == True).count()
+    total_bids = db.query(Bid).count()
+    total_alerts = db.query(Alert).count()
+    last_health = db.query(MonitorHealth).order_by(desc(MonitorHealth.checked_at)).first()
+    scheduler = get_scheduler_status()
+
+    return SystemStatus(
+        status="ok",
+        monitor_running=scheduler["running"],
+        total_profiles=total_profiles,
+        active_profiles=active_profiles,
+        total_bids_in_db=total_bids,
+        total_alerts=total_alerts,
+        last_check=last_health.checked_at if last_health else None,
+    )
+
+
+@router.get("/history", response_model=List[HealthOut])
+def get_health_history(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
+    return (
+        db.query(MonitorHealth)
+        .order_by(desc(MonitorHealth.checked_at))
+        .offset(skip).limit(limit).all()
+    )
+
+
+@router.post("/trigger-poll")
+def trigger_manual_poll(background_tasks: BackgroundTasks):
+    """Manually trigger a poll of all active profiles immediately."""
+    from app.workers.monitor_worker import poll_all_active_profiles
+    background_tasks.add_task(poll_all_active_profiles)
+    return {"message": "Manual poll triggered in background"}
