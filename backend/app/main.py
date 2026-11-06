@@ -4,12 +4,14 @@ GeM BidWatch — FastAPI Application Entry Point
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
 from app.workers.scheduler import start_scheduler, stop_scheduler
 from app.routers import profiles, bids, alerts, health, devices
+from app.dashboard import DASHBOARD_HTML
 
 # ─── LOGGING ──────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -56,11 +58,25 @@ app.include_router(health.router)
 app.include_router(devices.router)
 
 
+@app.get("/dashboard", response_class=HTMLResponse, tags=["Web Dashboard"])
+def dashboard_view():
+    """Interactive live Web Dashboard for monitoring GeM tenders."""
+    return HTMLResponse(content=DASHBOARD_HTML, status_code=200)
+
+
 @app.get("/", tags=["Root"])
-def root():
+def root(request: Request):
+    """
+    Returns the interactive Web Dashboard for browser users,
+    and JSON metadata for API clients / tests.
+    """
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept:
+        return HTMLResponse(content=DASHBOARD_HTML, status_code=200)
     return {
         "app": "GeM BidWatch",
         "version": "1.0.0",
         "docs": "/docs",
         "health": "/health",
+        "dashboard": "/dashboard",
     }
