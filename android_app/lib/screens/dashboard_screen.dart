@@ -287,7 +287,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       crossAxisSpacing: 10,
       mainAxisSpacing: 10,
       shrinkWrap: true,
-      physics: const NeverScrollableScrollException(),
+      physics: const NeverScrollableScrollPhysics(),
       childAspectRatio: 1.7,
       children: [
         // Metric 1: Cloud Engine
