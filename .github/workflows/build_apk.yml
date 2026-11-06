@@ -38,6 +38,11 @@ jobs:
         run: |
           cd android_app
           flutter create . --org com.gembidwatch --project-name gem_bidwatch_app
+          # Configure compileSdk and targetSdk to 35 for modern Android compatibility
+          sed -i 's/compileSdk = .*/compileSdk = 35/' android/app/build.gradle 2>/dev/null || true
+          sed -i 's/compileSdkVersion .*/compileSdkVersion 35/' android/app/build.gradle 2>/dev/null || true
+          sed -i 's/targetSdk = .*/targetSdk = 35/' android/app/build.gradle 2>/dev/null || true
+          sed -i 's/targetSdkVersion .*/targetSdkVersion 35/' android/app/build.gradle 2>/dev/null || true
 
       - name: Install Dependencies
         run: |
