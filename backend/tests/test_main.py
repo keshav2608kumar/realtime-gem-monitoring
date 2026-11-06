@@ -121,6 +121,52 @@ def test_list_bids_empty(client):
     assert r.json() == []
 
 
+def test_batch_sync_bids(client):
+    # 1. Create a profile
+    client.post("/profiles/", json={
+        "name": "Bangalore Toner",
+        "state": "KARNATAKA",
+        "cities": ["BANGALORE", "Bangalore Urban"],
+        "keywords": ["toner", "printer"],
+        "is_active": True,
+    })
+
+    # 2. Batch sync 2 bids (one matching, one not)
+    payload = [
+        {
+            "gem_bid_id": 111,
+            "bid_number": "GEM/2026/B/111",
+            "category_name": "HP Laserjet Toner Cartridge",
+            "consignee_state": "KARNATAKA",
+            "consignee_city": "BANGALORE",
+            "bid_url": "https://bidplus.gem.gov.in/showbidDocument/111",
+        },
+        {
+            "gem_bid_id": 222,
+            "bid_number": "GEM/2026/B/222",
+            "category_name": "Cleaning Broom Mop",
+            "consignee_state": "KARNATAKA",
+            "consignee_city": "BANGALORE",
+            "bid_url": "https://bidplus.gem.gov.in/showbidDocument/222",
+        }
+    ]
+    r = client.post("/bids/batch-sync", json=payload)
+    assert r.status_code == 201
+    res = r.json()
+    assert res["bids_received"] == 2
+    assert res["bids_inserted"] == 2
+    assert res["alerts_created"] == 1
+
+    # 3. Check /bids/ list
+    bids_res = client.get("/bids/")
+    assert len(bids_res.json()) == 2
+
+    # 4. Check /alerts/ list
+    alerts_res = client.get("/alerts/")
+    assert len(alerts_res.json()) == 1
+    assert alerts_res.json()[0]["bid"]["bid_number"] == "GEM/2026/B/111"
+
+
 def test_devices(client):
     r = client.post("/devices/", json={"fcm_token": "test-token-abc123456789", "device_name": "My Phone"})
     assert r.status_code == 201
