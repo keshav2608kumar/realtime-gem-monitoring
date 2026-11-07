@@ -21,6 +21,7 @@ class Profile(Base):
 
     # Category/keyword filters
     keywords = Column(JSON, nullable=True)            # ["toner","cartridge","printer","ink"]
+    categories = Column(JSON, nullable=True)          # ["TONER_INK_PRINTER_CONSUMABLES", "COMPUTER_PRINTER_V2"]
 
     # Value filters
     min_value = Column(Float, nullable=True)

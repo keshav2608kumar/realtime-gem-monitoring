@@ -15,6 +15,8 @@ class Bid(Base):
     bid_number = Column(String(100), unique=True, index=True, nullable=False)  # e.g. GEM/2026/B/...
     bid_number_parent = Column(String(100), nullable=True)
     category_name = Column(Text, nullable=True)
+    category_key = Column(String(100), index=True, nullable=True)  # Canonical category ID (e.g. TONER_INK_PRINTER_CONSUMABLES)
+    category_mapping_status = Column(String(50), default="UNKNOWN")  # VERIFIED, MAPPED, UNMAPPED, UNKNOWN
     quantity = Column(Integer, nullable=True)
     bid_type = Column(Integer, nullable=True)   # 1=BID, 2=RA, 5=DirectRA
     status = Column(Integer, nullable=True)
@@ -42,6 +44,21 @@ class Bid(Base):
     delivery_district = Column(String(100), nullable=True)
     delivery_city = Column(String(100), nullable=True)
     delivery_address = Column(Text, nullable=True)
+
+    # PDF Document Extracted Delivery Location Fields
+    pdf_delivery_address = Column(Text, nullable=True)
+    pdf_delivery_city = Column(String(100), nullable=True)
+    pdf_delivery_district = Column(String(100), nullable=True)
+    pdf_delivery_state = Column(String(100), nullable=True)
+    pdf_delivery_pincode = Column(String(20), nullable=True)
+    pdf_delivery_consignee = Column(String(200), nullable=True)
+    pdf_delivery_org = Column(String(255), nullable=True)
+    pdf_page_number = Column(Integer, nullable=True)
+    pdf_extraction_method = Column(String(50), default="PDF_TEXT")  # PDF_TEXT, OCR
+    pdf_confidence_score = Column(Float, nullable=True)
+    pdf_verification_status = Column(String(50), default="UNKNOWN")  # VERIFIED, PARTIALLY_VERIFIED, AMBIGUOUS, UNKNOWN, PDF_UNAVAILABLE
+    pdf_processed_at = Column(DateTime(timezone=True), nullable=True)
+    pdf_doc_hash = Column(String(64), nullable=True)
 
     raw_location_text = Column(Text, nullable=True)
     location_verification_status = Column(String(50), default="UNKNOWN")  # VERIFIED, NORMALIZED, AMBIGUOUS, UNKNOWN

@@ -14,6 +14,7 @@ from app.schemas import BidCreate
 from app.services.location_normalizer import normalize_location
 from app.services.datetime_service import parse_datetime
 from app.services.bid_status_service import calculate_bid_status
+from app.services.category_service import match_category
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,12 @@ def normalize_bid(raw: RawBid) -> Optional[BidCreate]:
         raw_status = raw.get("b_status")
         bid_status = calculate_bid_status(end_date, raw_status)
 
-        # 4. Quantity and Estimated Value
+        # 4. Category Classification
+        cat_name = raw.get("b_category_name")
+        cat_id_val = raw.get("b_cat_id")
+        category_key, _, category_status = match_category(cat_name, cat_id_val)
+
+        # 5. Quantity and Estimated Value
         quantity = raw.get("b_total_quantity")
         if quantity is not None:
             try:
@@ -89,7 +95,9 @@ def normalize_bid(raw: RawBid) -> Optional[BidCreate]:
             gem_bid_id=bid_id_val,
             bid_number=str(bid_number),
             bid_number_parent=raw.get("b_bid_number_parent"),
-            category_name=raw.get("b_category_name"),
+            category_name=cat_name,
+            category_key=category_key,
+            category_mapping_status=category_status,
             quantity=quantity,
             bid_type=bid_type,
             status=raw_status,

@@ -9,6 +9,7 @@ import re
 from typing import List, Optional
 from app.schemas import BidCreate, ProfileOut
 from app.services.location_normalizer import resolve_state, clean_text, CITY_DISTRICT_TO_STATE
+from app.services.category_service import match_category
 
 logger = logging.getLogger(__name__)
 
@@ -60,8 +61,10 @@ def match_bid_to_profile(bid: BidCreate, profile: ProfileOut) -> MatchResult:
 
         # Canonical city lookup if available
         canonical_bid_city = bid_city_clean
+        canonical_bid_dist = None
         if bid_city_clean in CITY_DISTRICT_TO_STATE:
             canonical_bid_city = CITY_DISTRICT_TO_STATE[bid_city_clean][0].lower()
+            canonical_bid_dist = CITY_DISTRICT_TO_STATE[bid_city_clean][1].lower()
 
         city_matched = False
         for c in profile.cities:
@@ -70,10 +73,18 @@ def match_bid_to_profile(bid: BidCreate, profile: ProfileOut) -> MatchResult:
                 continue
 
             canonical_c = c_clean
+            canonical_c_dist = None
             if c_clean in CITY_DISTRICT_TO_STATE:
                 canonical_c = CITY_DISTRICT_TO_STATE[c_clean][0].lower()
+                canonical_c_dist = CITY_DISTRICT_TO_STATE[c_clean][1].lower()
 
-            if canonical_c == canonical_bid_city or c_clean == bid_city_clean:
+            if (
+                canonical_c == canonical_bid_city
+                or c_clean == bid_city_clean
+                or (canonical_c_dist and canonical_c_dist == canonical_bid_dist)
+                or bool(re.search(r"\b" + re.escape(c_clean) + r"\b", bid_city_clean))
+                or bool(re.search(r"\b" + re.escape(bid_city_clean) + r"\b", c_clean))
+            ):
                 city_matched = True
                 break
 
@@ -83,7 +94,29 @@ def match_bid_to_profile(bid: BidCreate, profile: ProfileOut) -> MatchResult:
                 f"City mismatch: Bid city '{bid_city_clean}' not in profile cities"
             )
 
-    # ─── 3. Keyword Filter ──────────────────────────────────────────────────────
+    # ─── 3. Target Category Filter ──────────────────────────────────────────────
+    if profile.categories and len(profile.categories) > 0:
+        bid_cat_key = getattr(bid, "category_key", None)
+        if not bid_cat_key and bid.category_name:
+            bid_cat_key, _, _ = match_category(bid.category_name, bid.cat_id)
+
+        allowed_cats = set()
+        for pc in profile.categories:
+            if not pc:
+                continue
+            pc_clean = pc.strip().upper()
+            allowed_cats.add(pc_clean)
+            res_id, _, _ = match_category(pc)
+            if res_id:
+                allowed_cats.add(res_id)
+
+        if not bid_cat_key or bid_cat_key not in allowed_cats:
+            return MatchResult(
+                False, [],
+                f"Category mismatch: Bid category '{bid_cat_key}' not in profile categories"
+            )
+
+    # ─── 4. Keyword Filter ──────────────────────────────────────────────────────
     matched_keywords = []
     if profile.keywords:
         category_text = bid.category_name or ""
@@ -114,7 +147,13 @@ def match_bid_to_profile(bid: BidCreate, profile: ProfileOut) -> MatchResult:
         if allowed and not any(m in ministry_lower for m in allowed):
             return MatchResult(False, [], "Ministry filter did not match")
 
-    reason = f"Matched profile '{profile.name}' on keywords: {', '.join(matched_keywords)}"
+    reason_parts = []
+    if profile.categories:
+        reason_parts.append(f"category: {bid_cat_key}")
+    if matched_keywords:
+        reason_parts.append(f"keywords: {', '.join(matched_keywords)}")
+    reason_desc = " & ".join(reason_parts) if reason_parts else "all criteria"
+    reason = f"Matched profile '{profile.name}' on {reason_desc}"
     return MatchResult(True, matched_keywords, reason)
 
 

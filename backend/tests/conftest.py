@@ -52,6 +52,16 @@ def setup_db():
 
 
 @pytest.fixture
+def db_session():
+    """Yield a direct database session for test setup."""
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+@pytest.fixture
 def client():
     with TestClient(app) as c:
         yield c

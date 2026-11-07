@@ -9,6 +9,7 @@ apscheduler>=3.10.0
 python-dotenv>=1.0.0
 pytest>=8.0.0
 httpx>=0.27.0
+pypdf>=5.0.0
 pytest-asyncio>=0.23.0
 # Firebase (install separately when you have service account key)
 # firebase-admin>=6.5.0

@@ -75,8 +75,8 @@ def run_scanner_cycle(session: GemSession, fetcher: GemFetcher):
     print("="*65)
 
     cities = ["BANGALORE", "Bangalore Urban", "BENGALURU URBAN", "Bengaluru"]
-    keywords = ["toner", "cartridge", "printer", "ink"]
-    target_re = re.compile(r'\b(printer|toner|c(?:a|ar)tridge|ink(?:jet|s)?|mfp)\b', re.IGNORECASE)
+    keywords = ["toner", "cartridge", "printer", "ink", "scanner", "desktop", "laptop"]
+    target_re = re.compile(r'\b(printer|toner|c(?:a|ar)tridge|ink(?:jet|s)?|mfp|scanner|desktop|laptop)\b', re.IGNORECASE)
 
     all_normalized_bids = []
     seen_ids = set()

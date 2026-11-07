@@ -57,6 +57,21 @@ def migrate_db():
                     ("data_ingestion_time", "TIMESTAMP"),
                     ("bid_status", "VARCHAR(50)"),
                     ("estimated_value", "FLOAT"),
+                    ("category_key", "VARCHAR(100)"),
+                    ("category_mapping_status", "VARCHAR(50)"),
+                    ("pdf_delivery_address", "TEXT"),
+                    ("pdf_delivery_city", "VARCHAR(100)"),
+                    ("pdf_delivery_district", "VARCHAR(100)"),
+                    ("pdf_delivery_state", "VARCHAR(100)"),
+                    ("pdf_delivery_pincode", "VARCHAR(20)"),
+                    ("pdf_delivery_consignee", "VARCHAR(200)"),
+                    ("pdf_delivery_org", "VARCHAR(255)"),
+                    ("pdf_page_number", "INTEGER"),
+                    ("pdf_extraction_method", "VARCHAR(50)"),
+                    ("pdf_confidence_score", "FLOAT"),
+                    ("pdf_verification_status", "VARCHAR(50)"),
+                    ("pdf_processed_at", "TIMESTAMP"),
+                    ("pdf_doc_hash", "VARCHAR(64)"),
                 ]
                 for col_name, col_type in bid_cols_to_add:
                     if col_name not in existing_bid_cols:
@@ -90,6 +105,35 @@ def migrate_db():
                             logger.debug(f"Column {col_name} addition notice: {ce}")
         except Exception as e:
             logger.warning(f"Notice during alerts table migration check: {e}")
+
+        # Check profiles table columns
+        try:
+            result = conn.execute(text("PRAGMA table_info(profiles)"))
+            existing_prof_cols = {row[1] for row in result.fetchall()}
+            if existing_prof_cols and "categories" not in existing_prof_cols:
+                conn.execute(text("ALTER TABLE profiles ADD COLUMN categories JSON"))
+                conn.commit()
+                logger.info("Added column categories to profiles table")
+        except Exception as pe:
+            logger.debug(f"Notice during profiles table migration check: {pe}")
+
+        # Backfill category_key on bids if missing
+        try:
+            from app.services.category_service import match_category
+            bids_to_backfill = conn.execute(
+                text("SELECT id, category_name, cat_id FROM bids WHERE category_key IS NULL AND category_name IS NOT NULL")
+            ).fetchall()
+            for b_row in bids_to_backfill:
+                b_id, cat_name, cat_id = b_row[0], b_row[1], b_row[2]
+                ckey, cname, cstatus = match_category(cat_name, cat_id)
+                if ckey:
+                    conn.execute(
+                        text("UPDATE bids SET category_key = :ckey, category_mapping_status = :cstatus WHERE id = :bid_id"),
+                        {"ckey": ckey, "cstatus": cstatus, "bid_id": b_id}
+                    )
+            conn.commit()
+        except Exception as bfe:
+            logger.debug(f"Notice during category backfill: {bfe}")
 
 
 def init_db():

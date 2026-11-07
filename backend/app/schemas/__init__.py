@@ -13,6 +13,8 @@ class BidBase(BaseModel):
     bid_number: str
     bid_number_parent: Optional[str] = None
     category_name: Optional[str] = None
+    category_key: Optional[str] = None
+    category_mapping_status: Optional[str] = "UNKNOWN"
     quantity: Optional[int] = None
     bid_type: Optional[int] = None
     status: Optional[int] = None
@@ -37,6 +39,21 @@ class BidBase(BaseModel):
     delivery_district: Optional[str] = None
     delivery_city: Optional[str] = None
     delivery_address: Optional[str] = None
+
+    # PDF Extracted Delivery Location Fields
+    pdf_delivery_address: Optional[str] = None
+    pdf_delivery_city: Optional[str] = None
+    pdf_delivery_district: Optional[str] = None
+    pdf_delivery_state: Optional[str] = None
+    pdf_delivery_pincode: Optional[str] = None
+    pdf_delivery_consignee: Optional[str] = None
+    pdf_delivery_org: Optional[str] = None
+    pdf_page_number: Optional[int] = None
+    pdf_extraction_method: Optional[str] = "PDF_TEXT"
+    pdf_confidence_score: Optional[float] = None
+    pdf_verification_status: Optional[str] = "UNKNOWN"
+    pdf_processed_at: Optional[datetime] = None
+    pdf_doc_hash: Optional[str] = None
 
     raw_location_text: Optional[str] = None
     location_verification_status: Optional[str] = "UNKNOWN"
@@ -72,6 +89,7 @@ class ProfileCreate(BaseModel):
     state: str = Field(..., min_length=1)
     cities: Optional[List[str]] = None
     keywords: Optional[List[str]] = None
+    categories: Optional[List[str]] = None
     min_value: Optional[float] = None
     max_value: Optional[float] = None
     ministry_filter: Optional[List[str]] = None
@@ -84,6 +102,7 @@ class ProfileUpdate(BaseModel):
     state: Optional[str] = None
     cities: Optional[List[str]] = None
     keywords: Optional[List[str]] = None
+    categories: Optional[List[str]] = None
     min_value: Optional[float] = None
     max_value: Optional[float] = None
     ministry_filter: Optional[List[str]] = None

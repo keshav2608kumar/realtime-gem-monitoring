@@ -1,7 +1,8 @@
 """
 GeM BidWatch — Executive Enterprise Dashboard
 Real-time 24/7 Procurement Monitoring with Accurate Administrative Locations,
-Timezone-Aware IST Timestamps, Strict Lifecycle Segregation, and Vector Branding.
+Timezone-Aware IST Timestamps, Strict Lifecycle Segregation,
+7 Dedicated Product Category Filters, and Document-Extracted Delivery Location Intelligence.
 """
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
@@ -54,6 +55,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       100% { transform: scale(0.95); opacity: 0.8; }
     }
     .radar-pulse { animation: pulseRadar 2s infinite ease-in-out; }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #020617; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-red-500 selection:text-white">
@@ -77,9 +83,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <div>
           <div class="flex items-center gap-2">
             <span class="font-extrabold text-base sm:text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">GeM BidWatch</span>
-            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">PRO v2.0</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">ENTERPRISE v2.5</span>
           </div>
-          <p class="text-[11px] text-slate-400 hidden sm:block">Government e-Marketplace Enterprise Procurement Radar</p>
+          <p class="text-[11px] text-slate-400 hidden sm:block">Government e-Marketplace High-Accuracy Procurement Radar</p>
         </div>
       </div>
 
@@ -171,6 +177,54 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
     </div>
 
+    <!-- DEDICATED PRODUCT CATEGORY FILTER PANEL (FEATURE 1) -->
+    <div class="p-4 bg-slate-900/90 rounded-2xl border border-slate-800 shadow-xl space-y-3">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+            <i class="fa-solid fa-layer-group text-sm"></i>
+          </div>
+          <div>
+            <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <span>Official GeM Product Category Filters</span>
+              <span id="selectedCatBadge" class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">7 Selected</span>
+            </h3>
+            <p class="text-[11px] text-slate-400">Multi-select target GeM categories to narrow live opportunities &amp; radar alerts.</p>
+          </div>
+        </div>
+
+        <!-- Quick Multi-Select Controls -->
+        <div class="flex items-center gap-2 self-end sm:self-center">
+          <button onclick="selectAllCategories()" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-check-double text-[10px] text-blue-400"></i>
+            <span>Select All</span>
+          </button>
+          <button onclick="clearAllCategories()" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-xmark text-[10px]"></i>
+            <span>Clear All</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 7 Exact Categories Checkbox Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1" id="categoryCheckboxesContainer">
+        <!-- Rendered dynamically via renderCategoryCheckboxes() -->
+      </div>
+
+      <!-- Active Filter Summary Bar -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-400 pt-2 border-t border-slate-800/60">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span class="font-bold text-slate-400 uppercase text-[10px]">Active Filters:</span>
+          <div id="activeCategoryChips" class="flex items-center gap-1.5 flex-wrap">
+            <!-- Chips rendered dynamically -->
+          </div>
+        </div>
+        <div class="text-[10px] text-slate-500 font-mono">
+          <i class="fa-solid fa-database mr-1"></i>Synchronized with Backend Query Engine
+        </div>
+      </div>
+    </div>
+
     <!-- ACTIVE EMERGENCY BANNER -->
     <div id="activeAlertBanner" class="hidden p-4 rounded-xl bg-gradient-to-r from-red-950/80 via-slate-900 to-slate-900 border-l-4 border-l-red-500 border border-red-900/40 shadow-lg">
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -249,26 +303,18 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
         </div>
 
-        <!-- Row 2: Category Filters & Search Input -->
+        <!-- Row 2: Search Input & Location Scope -->
         <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-1">
           
-          <!-- Category Quick Filters -->
-          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-            <button onclick="setCategoryFilter('')" data-cat="" class="cat-btn px-2.5 py-1 rounded-lg font-semibold bg-red-600 text-white flex-shrink-0">
-              All Target Categories
-            </button>
-            <button onclick="setCategoryFilter('printer')" data-cat="printer" class="cat-btn px-2.5 py-1 rounded-lg font-semibold bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800 flex-shrink-0">
-              Printers & MFP
-            </button>
-            <button onclick="setCategoryFilter('toner')" data-cat="toner" class="cat-btn px-2.5 py-1 rounded-lg font-semibold bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800 flex-shrink-0">
-              Toner & Cartridges
-            </button>
-            <button onclick="setCategoryFilter('refill')" data-cat="refill" class="cat-btn px-2.5 py-1 rounded-lg font-semibold bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800 flex-shrink-0">
-              Refill & Maintenance
-            </button>
-            <button onclick="setCategoryFilter('ink')" data-cat="ink" class="cat-btn px-2.5 py-1 rounded-lg font-semibold bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800 flex-shrink-0">
-              OEM Ink & Drums
-            </button>
+          <!-- Location Scope Selector -->
+          <div class="flex items-center gap-2 text-xs text-slate-400">
+            <span class="font-bold text-[10px] uppercase tracking-wider text-slate-500">Location Filter Target:</span>
+            <select id="locationTypeSelect" onchange="onLocationTypeChange()" class="px-2.5 py-1 rounded-lg bg-slate-950 text-slate-200 border border-slate-800 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500">
+              <option value="consignee" selected>Consignee / Delivery Address</option>
+              <option value="pdf_delivery">PDF Extracted Address Only</option>
+              <option value="buyer">Buyer Organization Only</option>
+              <option value="any">Any Available Location</option>
+            </select>
           </div>
 
           <!-- Multi-Search Input -->
@@ -290,12 +336,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           <thead class="bg-slate-950 text-slate-400 uppercase font-bold text-[10px] tracking-wider border-b border-slate-800">
             <tr>
               <th class="py-3 px-4 w-44">Tender Number</th>
-              <th class="py-3 px-4 w-64">Procuring Department</th>
+              <th class="py-3 px-4 w-60">Procuring Department</th>
               <th class="py-3 px-4 min-w-[200px]">Item & Category</th>
-              <th class="py-3 px-4 w-40">Delivery Location</th>
+              <th class="py-3 px-4 w-44">Delivery Location</th>
               <th class="py-3 px-4 w-36">Published Date (IST)</th>
               <th class="py-3 px-4 w-44">Bid Deadline (IST)</th>
-              <th class="py-3 px-4 w-28 text-center">Action</th>
+              <th class="py-3 px-4 w-32 text-center">Action</th>
             </tr>
           </thead>
           <tbody id="bidsTableBody" class="divide-y divide-slate-800/60 font-sans">
@@ -322,6 +368,85 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     </div>
 
   </main>
+
+  <!-- TENDER DETAIL & PDF LOCATION MODAL (FEATURE 2) -->
+  <div id="bidDetailModal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-4">
+      <div class="flex items-start justify-between border-b border-slate-800 pb-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-blue-600 text-white">GeM TENDER INTELLIGENCE</span>
+            <span id="detailBidStatus" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">ACTIVE</span>
+          </div>
+          <h2 id="detailBidNumber" class="text-lg font-black text-white font-mono mt-1">--</h2>
+          <p id="detailCategory" class="text-xs text-slate-300 mt-0.5">--</p>
+        </div>
+        <button onclick="closeBidDetailModal()" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Overview Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs">
+        <div>
+          <span class="text-[10px] font-bold uppercase text-slate-500">Department</span>
+          <p id="detailDept" class="font-bold text-slate-200 mt-0.5">--</p>
+        </div>
+        <div>
+          <span class="text-[10px] font-bold uppercase text-slate-500">Ministry</span>
+          <p id="detailMinistry" class="font-semibold text-slate-300 mt-0.5">--</p>
+        </div>
+        <div>
+          <span class="text-[10px] font-bold uppercase text-slate-500">Quantity</span>
+          <p id="detailQty" class="font-mono font-bold text-slate-200 mt-0.5">--</p>
+        </div>
+        <div>
+          <span class="text-[10px] font-bold uppercase text-slate-500">Published Date</span>
+          <p id="detailPubDate" class="font-mono text-slate-300 mt-0.5">--</p>
+        </div>
+        <div>
+          <span class="text-[10px] font-bold uppercase text-slate-500">Bid Deadline</span>
+          <p id="detailEndDate" class="font-mono font-bold text-amber-300 mt-0.5">--</p>
+        </div>
+        <div>
+          <span class="text-[10px] font-bold uppercase text-slate-500">Time Remaining</span>
+          <p id="detailTimeRem" class="font-semibold text-emerald-400 mt-0.5">--</p>
+        </div>
+      </div>
+
+      <!-- DEDICATED SECTION: DELIVERY LOCATION — EXTRACTED FROM BID DOCUMENT -->
+      <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-file-shield text-emerald-400 text-sm"></i>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-white">DELIVERY LOCATION — EXTRACTED FROM BID DOCUMENT</h4>
+          </div>
+          <span id="detailPdfStatusBadge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">UNKNOWN</span>
+        </div>
+
+        <div id="detailPdfContent" class="text-xs space-y-2">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center justify-between pt-2">
+        <button id="btnTriggerPdfExtract" onclick="runOnDemandPdfExtraction()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition">
+          <i id="extractSpinner" class="fa-solid fa-arrows-rotate text-[11px]"></i>
+          <span>Extract / Re-verify from PDF</span>
+        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="closeBidDetailModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700">
+            Close
+          </button>
+          <a id="detailPdfLink" href="#" target="_blank" class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md shadow-red-600/30 flex items-center gap-1.5">
+            <i class="fa-solid fa-file-pdf"></i>
+            <span>Open Official PDF</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- RED ALERT SIREN POPUP MODAL -->
   <div id="redAlertModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -366,13 +491,40 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
   <!-- JAVASCRIPT APP LOGIC -->
   <script>
+    // 7 Canonical GeM Categories with exact names
+    const CANONICAL_CATEGORIES = [
+      { id: 'TONER_INK_PRINTER_CONSUMABLES', name: 'Toner Cartridges / Ink Cartridges / Consumables for Printers' },
+      { id: 'SCANNER_V3', name: 'Scanner (V3)' },
+      { id: 'A4_LEGAL_SIZE_MFP', name: 'A4 and Legal Size Multifunction Printer (MFP)' },
+      { id: 'A3_SIZE_MFP', name: 'A3 Size Multifunction Printer (MFP)' },
+      { id: 'COMPUTER_PRINTER_V2', name: 'Computer Printer (V2)' },
+      { id: 'HIGH_END_DESKTOP', name: 'High End Desktop Computer' },
+      { id: 'HIGH_END_LAPTOP_NOTEBOOK', name: 'High End Laptop - Notebook' },
+    ];
+
     // Global State
     let currentFeedStatus = 'active'; // 'active', 'closing_soon', 'expired', 'all'
     let currentSortBy = 'closing_soonest';
-    let currentCategoryFilter = '';
+    let currentLocationType = 'consignee';
     let searchQuery = '';
     let allBids = [];
     let activeAlertId = null;
+    let currentModalBid = null;
+
+    // Persisted Category Selection (localStorage)
+    let selectedCategories = [];
+    try {
+      const stored = localStorage.getItem('gem_selected_categories');
+      if (stored) {
+        selectedCategories = JSON.parse(stored);
+      } else {
+        // Default: all 7 categories selected
+        selectedCategories = CANONICAL_CATEGORIES.map(c => c.id);
+        localStorage.setItem('gem_selected_categories', JSON.stringify(selectedCategories));
+      }
+    } catch (e) {
+      selectedCategories = CANONICAL_CATEGORIES.map(c => c.id);
+    }
 
     // Siren Audio Context
     let audioCtx = null;
@@ -447,11 +599,87 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       document.getElementById('redAlertModal').classList.add('hidden');
     }
 
-    // --- DATA LOADING ---
+    // --- CATEGORY FILTER UI CONTROLS (FEATURE 1) ---
+    function renderCategoryCheckboxes() {
+      const container = document.getElementById('categoryCheckboxesContainer');
+      const chipsContainer = document.getElementById('activeCategoryChips');
+      const badge = document.getElementById('selectedCatBadge');
+
+      badge.textContent = `${selectedCategories.length} of ${CANONICAL_CATEGORIES.length} Selected`;
+
+      container.innerHTML = CANONICAL_CATEGORIES.map(c => {
+        const isChecked = selectedCategories.includes(c.id);
+        const borderStyle = isChecked ? 'border-blue-500/50 bg-blue-950/20' : 'border-slate-800 bg-slate-950/40 opacity-75';
+        return `
+          <label class="flex items-start gap-2.5 p-2.5 rounded-xl border ${borderStyle} hover:border-slate-700 cursor-pointer transition select-none">
+            <input type="checkbox" onchange="toggleCategory('${c.id}')" ${isChecked ? 'checked' : ''} class="mt-0.5 rounded border-slate-700 text-blue-600 focus:ring-0 focus:ring-offset-0 bg-slate-900 cursor-pointer w-4 h-4">
+            <div class="leading-tight">
+              <span class="text-xs font-bold text-slate-100 block">${escapeHtml(c.name)}</span>
+            </div>
+          </label>
+        `;
+      }).join('');
+
+      // Render summary chips
+      if (selectedCategories.length === 0) {
+        chipsContainer.innerHTML = '<span class="text-red-400 font-bold italic text-[11px]"><i class="fa-solid fa-triangle-exclamation mr-1"></i>None selected (Feed empty)</span>';
+      } else if (selectedCategories.length === CANONICAL_CATEGORIES.length) {
+        chipsContainer.innerHTML = '<span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20 font-bold text-[10px]">ALL 7 TARGET CATEGORIES</span>';
+      } else {
+        chipsContainer.innerHTML = selectedCategories.map(catId => {
+          const cat = CANONICAL_CATEGORIES.find(c => c.id === catId);
+          const label = cat ? cat.name : catId;
+          return `
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 text-[10px] font-semibold">
+              <span class="max-w-[150px] truncate">${escapeHtml(label)}</span>
+              <button onclick="toggleCategory('${catId}')" class="text-slate-400 hover:text-white ml-0.5" title="Remove">&times;</button>
+            </span>
+          `;
+        }).join('');
+      }
+    }
+
+    function toggleCategory(catId) {
+      if (selectedCategories.includes(catId)) {
+        selectedCategories = selectedCategories.filter(id => id !== catId);
+      } else {
+        selectedCategories.push(catId);
+      }
+      try {
+        localStorage.setItem('gem_selected_categories', JSON.stringify(selectedCategories));
+      } catch (e) {}
+      renderCategoryCheckboxes();
+      loadDashboardData();
+    }
+
+    function selectAllCategories() {
+      selectedCategories = CANONICAL_CATEGORIES.map(c => c.id);
+      try {
+        localStorage.setItem('gem_selected_categories', JSON.stringify(selectedCategories));
+      } catch (e) {}
+      renderCategoryCheckboxes();
+      loadDashboardData();
+    }
+
+    function clearAllCategories() {
+      selectedCategories = [];
+      try {
+        localStorage.setItem('gem_selected_categories', JSON.stringify(selectedCategories));
+      } catch (e) {}
+      renderCategoryCheckboxes();
+      loadDashboardData();
+    }
+
+    // --- DATA LOADING & BACKEND SYNC ---
     async function loadDashboardData() {
       try {
-        // Fetch Bids with server-side status & sorting
-        const url = `/bids/?status=${encodeURIComponent(currentFeedStatus)}&sort_by=${encodeURIComponent(currentSortBy)}&limit=200`;
+        // Build URL with categories parameter array
+        let url = `/bids/?status=${encodeURIComponent(currentFeedStatus)}&sort_by=${encodeURIComponent(currentSortBy)}&location_type=${encodeURIComponent(currentLocationType)}&limit=250`;
+        if (selectedCategories && selectedCategories.length > 0) {
+          const catParams = selectedCategories.map(c => `categories=${encodeURIComponent(c)}`).join('&');
+          url += `&${catParams}`;
+        }
+
         const [bidsRes, statsRes, alertsRes, healthRes] = await Promise.allSettled([
           fetch(url).then(r => r.ok ? r.json() : []),
           fetch('/bids/summary/stats').then(r => r.ok ? r.json() : null),
@@ -506,7 +734,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           const bid = topAlert.bid;
           if (bid) {
             renderActiveBanner(topAlert, bid);
-            // Trigger siren only for unacknowledged alerts
             playAudioSiren();
           }
         }
@@ -538,26 +765,30 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     }
 
     // --- TABLE FILTERING & RENDERING ---
-    function matchesCategory(catName, filterKey) {
-      if (!filterKey) return true;
-      if (!catName) return false;
-      const t = catName.toLowerCase();
-      if (filterKey === 'printer') return /\\b(printers?|mfp)\\b/i.test(t);
-      if (filterKey === 'toner') return /\\b(toner|cartridge|c(?:a|ar)tridge)\\b/i.test(t);
-      if (filterKey === 'refill') return /\\b(refill|roller|maintenance|repair)\\b/i.test(t);
-      if (filterKey === 'ink') return /\\b(ink(?:jet|s)?|drum|ribbon)\\b/i.test(t);
-      return true;
-    }
-
     function renderBidsTable() {
       const tbody = document.getElementById('bidsTableBody');
       const q = searchQuery.toLowerCase().trim();
 
-      let filtered = allBids;
-
-      if (currentCategoryFilter) {
-        filtered = filtered.filter(b => matchesCategory(b.category_name, currentCategoryFilter));
+      // If user cleared all categories, feed is empty by definition
+      if (!selectedCategories || selectedCategories.length === 0) {
+        document.getElementById('lblShownCount').textContent = 0;
+        document.getElementById('lblFilteredCount').textContent = 0;
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="py-14 text-center text-slate-400">
+              <i class="fa-solid fa-layer-group text-3xl mb-2 text-slate-600 block"></i>
+              <p class="font-bold text-slate-300">No Product Categories Selected</p>
+              <p class="text-xs text-slate-500 mt-1">Please select one or more categories above or click <strong>'Select All'</strong> to display tenders.</p>
+              <button onclick="selectAllCategories()" class="mt-3 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition">
+                Select All 7 Categories
+              </button>
+            </td>
+          </tr>
+        `;
+        return;
       }
+
+      let filtered = allBids;
 
       if (q) {
         filtered = filtered.filter(b =>
@@ -566,7 +797,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           (b.dept_name && b.dept_name.toLowerCase().includes(q)) ||
           (b.display_location && b.display_location.toLowerCase().includes(q)) ||
           (b.consignee_city && b.consignee_city.toLowerCase().includes(q)) ||
-          (b.consignee_state && b.consignee_state.toLowerCase().includes(q))
+          (b.consignee_state && b.consignee_state.toLowerCase().includes(q)) ||
+          (b.pdf_delivery_city && b.pdf_delivery_city.toLowerCase().includes(q)) ||
+          (b.pdf_delivery_pincode && b.pdf_delivery_pincode.toLowerCase().includes(q))
         );
       }
 
@@ -579,7 +812,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             <td colspan="7" class="py-14 text-center text-slate-400">
               <i class="fa-solid fa-filter-circle-xmark text-3xl mb-2 text-slate-600 block"></i>
               <p class="font-bold text-slate-300">No tenders match selected criteria</p>
-              <p class="text-xs text-slate-500 mt-1">Try switching tabs or resetting search filters.</p>
+              <p class="text-xs text-slate-500 mt-1">Try switching tabs or adjusting search query.</p>
             </td>
           </tr>
         `;
@@ -608,9 +841,28 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           ? '<span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-slate-800 text-slate-400 border border-slate-700">EXPIRED</span>'
           : '<span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-red-600/20 text-red-400 border border-red-500/30">MATCH</span>';
 
-        const locBadge = b.location_verification_status === 'VERIFIED'
-          ? '<span class="text-[9px] text-emerald-400" title="Verified Administrative Location"><i class="fa-solid fa-circle-check"></i></span>'
-          : '';
+        // Delivery Location Representation (FEATURE 2)
+        let locationMarkup = '';
+        if (b.pdf_delivery_city) {
+          const pinStr = b.pdf_delivery_pincode ? ` - ${escapeHtml(b.pdf_delivery_pincode)}` : '';
+          locationMarkup = `
+            <div class="inline-flex flex-col">
+              <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold">
+                <i class="fa-solid fa-file-circle-check text-emerald-400 text-xs"></i>
+                <span>${escapeHtml(b.pdf_delivery_city)}, ${escapeHtml(b.pdf_delivery_state || '')}</span>
+              </span>
+              <span class="text-[10px] text-slate-400 mt-0.5 font-mono">PIN: ${escapeHtml(b.pdf_delivery_pincode || 'N/A')} (p.${b.pdf_page_number || '?'})</span>
+            </div>
+          `;
+        } else {
+          locationMarkup = `
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 text-slate-300 border border-slate-800 text-[11px]">
+              <i class="fa-solid fa-location-dot ${isExp ? 'text-slate-500' : 'text-red-400'}"></i>
+              <span>${loc}</span>
+              ${b.location_verification_status === 'VERIFIED' ? '<i class="fa-solid fa-circle-check text-[9px] text-emerald-400"></i>' : ''}
+            </span>
+          `;
+        }
 
         const rowBg = isExp ? 'bg-slate-950/20 opacity-60 hover:opacity-100 hover:bg-slate-900/40' : 'bg-slate-950/40 hover:bg-slate-900/70';
 
@@ -647,11 +899,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
             <!-- Delivery Location -->
             <td class="py-3 px-4 whitespace-nowrap align-top">
-              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 text-slate-300 border border-slate-800 text-[11px]">
-                <i class="fa-solid fa-location-dot ${isExp ? 'text-slate-500' : 'text-red-400'}"></i>
-                <span>${loc}</span>
-                ${locBadge}
-              </span>
+              ${locationMarkup}
             </td>
 
             <!-- Published Date (IST) -->
@@ -667,18 +915,139 @@ DASHBOARD_HTML = """<!DOCTYPE html>
               ${timeRem ? `<div class="text-[10px] font-semibold ${isExp ? 'text-slate-500' : 'text-emerald-400'} mt-0.5">${timeRem}</div>` : ''}
             </td>
 
-            <!-- Action Link -->
+            <!-- Actions: Details Modal + PDF -->
             <td class="py-3 px-4 whitespace-nowrap align-top text-center">
-              ${b.bid_url ? `
-                <a href="${b.bid_url}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white border border-slate-700 hover:border-red-500 transition text-[11px] font-bold">
-                  <i class="fa-solid fa-file-pdf"></i>
-                  <span>PDF</span>
-                </a>
-              ` : '<span class="text-slate-600">N/A</span>'}
+              <div class="flex items-center justify-center gap-1.5">
+                <button onclick="openBidDetailsModal(${b.id})" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 transition text-[11px] font-bold" title="View Delivery Address & Inspection Details">
+                  <i class="fa-solid fa-circle-info"></i>
+                  <span>Details</span>
+                </button>
+                ${b.bid_url ? `
+                  <a href="${b.bid_url}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white border border-slate-700 hover:border-red-500 transition text-[11px] font-bold" title="Open Official GeM PDF Document">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <span>PDF</span>
+                  </a>
+                ` : ''}
+              </div>
             </td>
           </tr>
         `;
       }).join('');
+    }
+
+    // --- MODAL & PDF LOCATION INTELLIGENCE (FEATURE 2) ---
+    function openBidDetailsModal(bidId) {
+      const bid = allBids.find(b => b.id === bidId);
+      if (!bid) return;
+      currentModalBid = bid;
+
+      document.getElementById('detailBidNumber').textContent = bid.bid_number;
+      document.getElementById('detailCategory').textContent = bid.category_name || 'Unspecified';
+      document.getElementById('detailBidStatus').textContent = bid.bid_status || 'ACTIVE';
+      document.getElementById('detailDept').textContent = bid.dept_name || 'N/A';
+      document.getElementById('detailMinistry').textContent = bid.ministry_name || 'N/A';
+      document.getElementById('detailQty').textContent = bid.quantity ? `${bid.quantity} Units` : 'N/A';
+      document.getElementById('detailPubDate').textContent = `${bid.published_date || 'N/A'} ${bid.published_time || ''}`;
+      document.getElementById('detailEndDate').textContent = `${bid.end_date_formatted || 'N/A'} ${bid.end_time_formatted || ''}`;
+      document.getElementById('detailTimeRem').textContent = bid.time_remaining || 'N/A';
+      document.getElementById('detailPdfLink').href = bid.bid_url || '#';
+
+      renderModalPdfContent(bid);
+      document.getElementById('bidDetailModal').classList.remove('hidden');
+    }
+
+    function renderModalPdfContent(bid) {
+      const badge = document.getElementById('detailPdfStatusBadge');
+      const content = document.getElementById('detailPdfContent');
+
+      const status = bid.pdf_verification_status || 'UNKNOWN';
+      badge.textContent = status;
+
+      if (status === 'VERIFIED') {
+        badge.className = "px-2.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+      } else if (status === 'PARTIALLY_VERIFIED') {
+        badge.className = "px-2.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30";
+      } else {
+        badge.className = "px-2.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700";
+      }
+
+      if (bid.pdf_delivery_address && status !== 'UNKNOWN' && status !== 'PDF_UNAVAILABLE') {
+        content.innerHTML = `
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2 border-b border-slate-800/60">
+            <div>
+              <span class="text-[10px] uppercase font-bold text-slate-500 block">Consignee / Reporting Officer</span>
+              <p class="font-bold text-slate-100 mt-0.5">${escapeHtml(bid.pdf_delivery_consignee || 'Consignee details in address block')}</p>
+            </div>
+            <div>
+              <span class="text-[10px] uppercase font-bold text-slate-500 block">Organization / Institution</span>
+              <p class="font-bold text-slate-100 mt-0.5">${escapeHtml(bid.pdf_delivery_org || bid.dept_name || 'N/A')}</p>
+            </div>
+          </div>
+          <div>
+            <span class="text-[10px] uppercase font-bold text-slate-500 block">Full Extracted Delivery Address</span>
+            <p class="font-mono text-slate-200 bg-slate-900 p-2.5 rounded-lg border border-slate-800 mt-1 select-all">${escapeHtml(bid.pdf_delivery_address)}</p>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono text-[11px]">
+            <div>
+              <span class="text-[10px] uppercase font-bold text-slate-500 font-sans block">City / Town</span>
+              <span class="font-bold text-slate-200">${escapeHtml(bid.pdf_delivery_city || 'N/A')}</span>
+            </div>
+            <div>
+              <span class="text-[10px] uppercase font-bold text-slate-500 font-sans block">State</span>
+              <span class="font-bold text-slate-200">${escapeHtml(bid.pdf_delivery_state || 'N/A')}</span>
+            </div>
+            <div>
+              <span class="text-[10px] uppercase font-bold text-slate-500 font-sans block">PIN Code</span>
+              <span class="font-bold text-amber-300">${escapeHtml(bid.pdf_delivery_pincode || 'N/A')}</span>
+            </div>
+            <div>
+              <span class="text-[10px] uppercase font-bold text-slate-500 font-sans block">PDF Page</span>
+              <span class="font-bold text-blue-400">Page ${escapeHtml(bid.pdf_page_number || 'Final')}</span>
+            </div>
+          </div>
+        `;
+      } else {
+        content.innerHTML = `
+          <div class="py-4 text-center text-slate-400 space-y-1">
+            <i class="fa-solid fa-file-circle-question text-2xl text-slate-600 block mb-1"></i>
+            <p class="font-bold text-slate-300">Delivery address could not be verified from the available document.</p>
+            <p class="text-[11px] text-slate-500">The PDF document has not yet been processed, or consignee details reside in an unindexed annexure.</p>
+          </div>
+        `;
+      }
+    }
+
+    async function runOnDemandPdfExtraction() {
+      if (!currentModalBid) return;
+      const btn = document.getElementById('btnTriggerPdfExtract');
+      const spinner = document.getElementById('extractSpinner');
+      spinner.classList.add('fa-spin');
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(`/bids/${currentModalBid.id}/extract-pdf`, { method: 'POST' });
+        if (res.ok) {
+          const updatedBid = await res.json();
+          currentModalBid = updatedBid;
+          // Update in allBids array
+          const idx = allBids.findIndex(b => b.id === updatedBid.id);
+          if (idx !== -1) allBids[idx] = updatedBid;
+          renderModalPdfContent(updatedBid);
+          renderBidsTable();
+        } else {
+          alert('Extraction notice: Official PDF could not be fetched from GeM portal at this moment.');
+        }
+      } catch (e) {
+        console.error('PDF extract error:', e);
+      } finally {
+        spinner.classList.remove('fa-spin');
+        btn.disabled = false;
+      }
+    }
+
+    function closeBidDetailModal() {
+      document.getElementById('bidDetailModal').classList.add('hidden');
+      currentModalBid = null;
     }
 
     // --- INTERACTION HANDLERS ---
@@ -703,16 +1072,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       loadDashboardData();
     }
 
-    function setCategoryFilter(catKey) {
-      currentCategoryFilter = catKey.toLowerCase();
-      document.querySelectorAll('.cat-btn').forEach(btn => {
-        if (btn.getAttribute('data-cat') === catKey) {
-          btn.className = "cat-btn px-2.5 py-1 rounded-lg font-semibold bg-red-600 text-white flex-shrink-0";
-        } else {
-          btn.className = "cat-btn px-2.5 py-1 rounded-lg font-semibold bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800 flex-shrink-0";
-        }
-      });
-      renderBidsTable();
+    function onLocationTypeChange() {
+      currentLocationType = document.getElementById('locationTypeSelect').value;
+      loadDashboardData();
     }
 
     function onSearchInput() {
@@ -770,8 +1132,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       }
     }, 1000);
 
-    // Initial Load
-    document.addEventListener('DOMContentLoaded', loadDashboardData);
+    // Initial Startup Load
+    document.addEventListener('DOMContentLoaded', () => {
+      renderCategoryCheckboxes();
+      loadDashboardData();
+    });
   </script>
 
 </body>

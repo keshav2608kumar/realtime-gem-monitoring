@@ -17,6 +17,8 @@ from app.services.bid_status_service import (
     calculate_bid_status, is_active_status, STATUS_ACTIVE, STATUS_EXPIRED, STATUS_CLOSING_SOON
 )
 from app.services.location_normalizer import normalize_location
+from app.services.category_service import match_category, get_all_target_categories, CATEGORIES_BY_ID
+from app.services.pdf_location_extractor import extract_location_from_pdf
 
 router = APIRouter(prefix="/bids", tags=["Bids"])
 
@@ -36,12 +38,23 @@ def _enrich_bid(b: Bid, now_utc: Optional[datetime] = None) -> BidOut:
         state_hint=b.consignee_state or b.buyer_state,
     )
 
+    # Resolve category key if missing
+    cat_key = b.category_key
+    cat_status = b.category_mapping_status or "UNKNOWN"
+    if not cat_key and b.category_name:
+        resolved_key, _, resolved_status = match_category(b.category_name, b.cat_id)
+        if resolved_key:
+            cat_key = resolved_key
+            cat_status = resolved_status
+
     out = BidOut(
         id=b.id,
         gem_bid_id=b.gem_bid_id,
         bid_number=b.bid_number,
         bid_number_parent=b.bid_number_parent,
         category_name=b.category_name,
+        category_key=cat_key,
+        category_mapping_status=cat_status,
         quantity=b.quantity,
         bid_type=b.bid_type,
         status=b.status,
@@ -62,6 +75,20 @@ def _enrich_bid(b: Bid, now_utc: Optional[datetime] = None) -> BidOut:
         delivery_district=b.delivery_district,
         delivery_city=b.delivery_city,
         delivery_address=b.delivery_address,
+        # PDF Extracted Delivery Location
+        pdf_delivery_address=b.pdf_delivery_address,
+        pdf_delivery_city=b.pdf_delivery_city,
+        pdf_delivery_district=b.pdf_delivery_district,
+        pdf_delivery_state=b.pdf_delivery_state,
+        pdf_delivery_pincode=b.pdf_delivery_pincode,
+        pdf_delivery_consignee=b.pdf_delivery_consignee,
+        pdf_delivery_org=b.pdf_delivery_org,
+        pdf_page_number=b.pdf_page_number,
+        pdf_extraction_method=b.pdf_extraction_method or "PDF_TEXT",
+        pdf_confidence_score=b.pdf_confidence_score,
+        pdf_verification_status=b.pdf_verification_status or "UNKNOWN",
+        pdf_processed_at=b.pdf_processed_at,
+        pdf_doc_hash=b.pdf_doc_hash,
         raw_location_text=b.raw_location_text or loc.raw_text,
         location_verification_status=b.location_verification_status or loc.confidence,
         data_source_classification=b.data_source_classification or "LIVE_VERIFIED",
@@ -95,8 +122,16 @@ def list_bids(
     ),
     state: Optional[str] = None,
     city: Optional[str] = None,
+    location_type: str = Query(
+        default="consignee",
+        description="Location field to match: 'consignee' (default), 'buyer', 'delivery', 'pdf_delivery', 'any'"
+    ),
     keyword: Optional[str] = None,
     category: Optional[str] = None,
+    categories: Optional[List[str]] = Query(
+        default=None,
+        description="One or more canonical product category IDs (e.g. TONER_INK_PRINTER_CONSUMABLES, SCANNER_V3)"
+    ),
     dept: Optional[str] = None,
     source_type: Optional[str] = None,
     db: Session = Depends(get_db),
@@ -123,23 +158,80 @@ def list_bids(
         q = q.filter(Bid.status == 2)
     # 'all' applies no status filtering
 
-    # 2. Location Filters
+    # 2. Location Filters (Segregated by location_type)
+    loc_type = (location_type or "consignee").lower().strip()
     if state:
-        q = q.filter(
-            or_(
-                Bid.consignee_state.ilike(f"%{state}%"),
-                Bid.buyer_state.ilike(f"%{state}%")
+        if loc_type == "buyer":
+            q = q.filter(Bid.buyer_state.ilike(f"%{state}%"))
+        elif loc_type == "delivery":
+            q = q.filter(Bid.delivery_state.ilike(f"%{state}%"))
+        elif loc_type == "pdf_delivery":
+            q = q.filter(Bid.pdf_delivery_state.ilike(f"%{state}%"))
+        elif loc_type == "any":
+            q = q.filter(
+                or_(
+                    Bid.consignee_state.ilike(f"%{state}%"),
+                    Bid.buyer_state.ilike(f"%{state}%"),
+                    Bid.delivery_state.ilike(f"%{state}%"),
+                    Bid.pdf_delivery_state.ilike(f"%{state}%"),
+                )
             )
-        )
-    if city:
-        q = q.filter(
-            or_(
-                Bid.consignee_city.ilike(f"%{city}%"),
-                Bid.buyer_city.ilike(f"%{city}%")
+        else:  # default "consignee"
+            q = q.filter(
+                or_(
+                    Bid.consignee_state.ilike(f"%{state}%"),
+                    Bid.buyer_state.ilike(f"%{state}%")
+                )
             )
-        )
 
-    # 3. Keyword / Category / Dept Filters
+    if city:
+        if loc_type == "buyer":
+            q = q.filter(Bid.buyer_city.ilike(f"%{city}%"))
+        elif loc_type == "delivery":
+            q = q.filter(Bid.delivery_city.ilike(f"%{city}%"))
+        elif loc_type == "pdf_delivery":
+            q = q.filter(Bid.pdf_delivery_city.ilike(f"%{city}%"))
+        elif loc_type == "any":
+            q = q.filter(
+                or_(
+                    Bid.consignee_city.ilike(f"%{city}%"),
+                    Bid.buyer_city.ilike(f"%{city}%"),
+                    Bid.delivery_city.ilike(f"%{city}%"),
+                    Bid.pdf_delivery_city.ilike(f"%{city}%"),
+                )
+            )
+        else:  # default "consignee"
+            q = q.filter(
+                or_(
+                    Bid.consignee_city.ilike(f"%{city}%"),
+                    Bid.buyer_city.ilike(f"%{city}%")
+                )
+            )
+
+    # 3. Canonical Product Category Filters
+    if categories:
+        selected_cat_keys = set()
+        for item in categories:
+            if not item:
+                continue
+            for part in str(item).split(","):
+                part_clean = part.strip().upper()
+                if part_clean in CATEGORIES_BY_ID:
+                    selected_cat_keys.add(part_clean)
+                else:
+                    k, _, _ = match_category(part)
+                    if k:
+                        selected_cat_keys.add(k)
+
+        if selected_cat_keys:
+            cat_filters = [Bid.category_key.in_(list(selected_cat_keys))]
+            for ck in selected_cat_keys:
+                c_def = CATEGORIES_BY_ID.get(ck)
+                if c_def:
+                    cat_filters.append(Bid.category_name.ilike(f"%{c_def.display_name}%"))
+            q = q.filter(or_(*cat_filters))
+
+    # 4. Keyword / Legacy Category / Dept Filters
     if keyword:
         kw = f"%{keyword}%"
         q = q.filter(
@@ -224,6 +316,9 @@ def batch_sync_bids(bids: List[BidCreate], db: Session = Depends(get_db)):
             state_hint=bid_data.consignee_state,
         )
 
+        # Classify product category
+        ckey, _, cstatus = match_category(bid_data.category_name, bid_data.cat_id)
+
         existing = db.query(Bid).filter(
             (Bid.bid_number == bid_data.bid_number) | (Bid.gem_bid_id == bid_data.gem_bid_id)
         ).first()
@@ -236,6 +331,9 @@ def batch_sync_bids(bids: List[BidCreate], db: Session = Depends(get_db)):
                 existing.start_date = bid_data.start_date
             if bid_data.category_name:
                 existing.category_name = bid_data.category_name
+            if ckey:
+                existing.category_key = ckey
+                existing.category_mapping_status = cstatus
             if bid_data.dept_name:
                 existing.dept_name = bid_data.dept_name
             if bid_data.ministry_name:
@@ -258,6 +356,8 @@ def batch_sync_bids(bids: List[BidCreate], db: Session = Depends(get_db)):
             dump["consignee_state"] = loc.state
             dump["consignee_district"] = loc.district
             dump["location_verification_status"] = loc.confidence
+            dump["category_key"] = ckey
+            dump["category_mapping_status"] = cstatus
             db_bid = Bid(**dump)
             db.add(db_bid)
             db.flush()
@@ -304,6 +404,55 @@ def batch_sync_bids(bids: List[BidCreate], db: Session = Depends(get_db)):
         "bids_updated": updated_count,
         "alerts_created": alerts_created,
     }
+
+
+@router.get("/categories/list")
+@router.get("/categories")
+def list_target_categories():
+    """Return the 7 official GeM target categories with stable IDs and exact display names."""
+    cats = get_all_target_categories()
+    return [
+        {
+            "id": c.id,
+            "display_name": c.display_name,
+            "short_code": c.short_code,
+            "description": c.description,
+        }
+        for c in cats
+    ]
+
+
+@router.post("/{bid_id}/extract-pdf", response_model=BidOut)
+def trigger_pdf_extraction(bid_id: int, db: Session = Depends(get_db)):
+    """
+    Extract delivery/consignee address from the final pages of the official GeM Bid PDF.
+    Updates database record with structured address, PIN code, and verification status.
+    """
+    b = db.query(Bid).filter(Bid.id == bid_id).first()
+    if not b:
+        raise HTTPException(status_code=404, detail="Bid not found")
+
+    if not b.bid_url:
+        raise HTTPException(status_code=400, detail="No official PDF URL available for this bid")
+
+    res = extract_location_from_pdf(pdf_url=b.bid_url)
+    b.pdf_delivery_address = res.full_address
+    b.pdf_delivery_city = res.city
+    b.pdf_delivery_district = res.district
+    b.pdf_delivery_state = res.state
+    b.pdf_delivery_pincode = res.pincode
+    b.pdf_delivery_consignee = res.consignee_name
+    b.pdf_delivery_org = res.organization
+    b.pdf_page_number = res.page_number
+    b.pdf_extraction_method = res.extraction_method
+    b.pdf_confidence_score = res.confidence_score
+    b.pdf_verification_status = res.verification_status
+    b.pdf_processed_at = datetime.now(timezone.utc)
+    b.pdf_doc_hash = res.doc_hash
+
+    db.commit()
+    db.refresh(b)
+    return _enrich_bid(b)
 
 
 @router.get("/{bid_id}", response_model=BidOut)
