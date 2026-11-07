@@ -107,7 +107,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                                   const Icon(Icons.location_on_outlined, size: 14, color: Colors.white54),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '${b?.consigneeCity ?? 'Bangalore'}, ${b?.consigneeState ?? 'KARNATAKA'}',
+                                    b?.displayLocation ?? 'Not available from source',
                                     style: const TextStyle(color: Colors.white70, fontSize: 12),
                                   ),
                                   const SizedBox(width: 12),
@@ -131,10 +131,10 @@ class _AlertsScreenState extends State<AlertsScreen> {
                                             builder: (_) => AlarmScreen(
                                               bidNumber: b.bidNumber,
                                               category: b.categoryName,
-                                              city: '${b.consigneeCity}, ${b.consigneeState}',
+                                              city: b.displayLocation,
                                               bidUrl: b.bidUrl,
                                               keywords: a.matchedKeywords,
-                                              endDate: b.endDate != null ? DateFormat('dd MMM yyyy, hh:mm a').format(b.endDate!.toLocal()) : '20 Nov 2026, 05:00 PM',
+                                              endDate: b.endDateFormatted.isNotEmpty ? b.endDateFormatted : 'Not available',
                                             ),
                                           ),
                                         );

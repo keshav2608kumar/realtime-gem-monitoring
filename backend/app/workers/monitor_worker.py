@@ -1,6 +1,6 @@
 """
 GeM BidWatch — Monitor Worker
-Core polling loop: fetches bids → deduplicates → matches → triggers alerts.
+Core polling loop: fetches bids → normalizes locations → deduplicates → matches → triggers alerts.
 """
 import logging
 import time
@@ -11,9 +11,11 @@ from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
 from app.models import Bid, Profile, Alert, MonitorHealth
-from app.schemas import BidCreate
+from app.schemas import BidCreate, ProfileOut
 from app.gem import GemSession, GemFetcher, normalize_bid, match_bid_to_profile, MatchResult
 from app.gem.filter_matcher import keywords_summary
+from app.services.location_normalizer import normalize_location
+from app.services.datetime_service import UTC_TZ
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +25,30 @@ _gem_session = GemSession()
 
 def _get_or_create_bid(db: Session, bid_data: BidCreate) -> tuple:
     """
-    Insert bid if not seen before. Returns (db_bid, is_new).
-    Uses gem_bid_id as the deduplication key.
+    Insert or update bid. Returns (db_bid, is_new).
+    Uses gem_bid_id or bid_number as deduplication keys.
     """
-    existing = db.query(Bid).filter(Bid.gem_bid_id == bid_data.gem_bid_id).first()
+    existing = db.query(Bid).filter(
+        (Bid.gem_bid_id == bid_data.gem_bid_id) | (Bid.bid_number == bid_data.bid_number)
+    ).first()
+
     if existing:
+        # Update with newly observed fields without destroying historical data
+        if bid_data.end_date:
+            existing.end_date = bid_data.end_date
+        if bid_data.start_date:
+            existing.start_date = bid_data.start_date
+        if bid_data.bid_status:
+            existing.bid_status = bid_data.bid_status
+        if bid_data.category_name:
+            existing.category_name = bid_data.category_name
+        if bid_data.dept_name:
+            existing.dept_name = bid_data.dept_name
+        if bid_data.consignee_city and bid_data.location_verification_status in ("VERIFIED", "NORMALIZED"):
+            existing.consignee_city = bid_data.consignee_city
+            existing.consignee_state = bid_data.consignee_state
+            existing.consignee_district = bid_data.consignee_district
+            existing.location_verification_status = bid_data.location_verification_status
         return existing, False
 
     new_bid = Bid(**bid_data.model_dump())
@@ -43,11 +64,14 @@ def _alert_exists(db: Session, profile_id: int, bid_id: int) -> bool:
     ).first() is not None
 
 
-def _create_alert(db: Session, profile_id: int, bid_id: int, matched_kws: List[str]) -> Alert:
+def _create_alert(db: Session, profile_id: int, bid_id: int, match: MatchResult) -> Alert:
     alert = Alert(
         profile_id=profile_id,
         bid_id=bid_id,
-        matched_keywords=keywords_summary(matched_kws),
+        matched_keywords=keywords_summary(match.matched_keywords),
+        match_reason=match.match_reason,
+        status="NEW",
+        acknowledged=False,
         notification_sent=False,
     )
     db.add(alert)
@@ -75,7 +99,7 @@ def run_profile_poll(profile: Profile) -> dict:
 
     try:
         fetcher = GemFetcher(_gem_session)
-        cities = profile.cities or [""]  # empty string = no city filter (whole state)
+        cities = profile.cities or [""]  # empty string = whole state
 
         all_raw_bids = []
         for city in cities:
@@ -85,8 +109,6 @@ def run_profile_poll(profile: Profile) -> dict:
 
         stats["bids_fetched"] = len(all_raw_bids)
 
-        # Import profile as schema (for filter_matcher)
-        from app.schemas import ProfileOut
         profile_schema = ProfileOut(
             id=profile.id,
             name=profile.name,
@@ -101,7 +123,6 @@ def run_profile_poll(profile: Profile) -> dict:
             created_at=profile.created_at or datetime.now(timezone.utc),
         )
 
-        # Seen gem_ids in this run (for dedup within same poll)
         seen_in_run = set()
 
         for raw in all_raw_bids:
@@ -122,9 +143,8 @@ def run_profile_poll(profile: Profile) -> dict:
             # Match against profile
             match = match_bid_to_profile(bid_data, profile_schema)
             if match.matched:
-                # Only alert once per profile+bid
                 if not _alert_exists(db, profile.id, db_bid.id):
-                    alert = _create_alert(db, profile.id, db_bid.id, match.matched_keywords)
+                    alert = _create_alert(db, profile.id, db_bid.id, match)
                     stats["bids_matched"] += 1
                     logger.info(
                         f"[{profile.name}] 🔔 NEW MATCH: {bid_data.bid_number} | "
@@ -139,7 +159,7 @@ def run_profile_poll(profile: Profile) -> dict:
             f"Fetched={stats['bids_fetched']} New={stats['bids_new']} Matched={stats['bids_matched']}"
         )
 
-        # Send FCM for all matched alerts (after DB commit)
+        # Dispatch FCM for newly created alerts
         if _pending_alert_ids:
             from app.notifications.fcm_sender import send_alert_notifications
             for aid in _pending_alert_ids:

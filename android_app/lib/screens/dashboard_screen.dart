@@ -109,7 +109,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() => _isScanning = true);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('⚡ Scanning GeM portal live for Bangalore tenders...'),
+        content: Text('⚡ Polling GeM portal live for active tenders...'),
         backgroundColor: Color(0xFF1E293B),
       ),
     );
@@ -206,7 +206,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
                 const Text(
-                  'Bangalore 24/7 Tender Monitor',
+                  'GeM 24/7 Procurement Radar',
                   style: TextStyle(fontSize: 10, color: Colors.white54),
                 ),
               ],
@@ -336,8 +336,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         // Metric 2: Target Location
         _buildMetricTile(
           title: 'TARGET REGION',
-          value: 'Bangalore Urban',
-          subtitle: 'KARNATAKA, India',
+          value: 'KARNATAKA',
+          subtitle: 'Active Regional Monitor',
           icon: Icons.my_location,
           iconColor: Colors.cyanAccent,
           iconBg: Colors.cyan.withOpacity(0.15),
@@ -477,7 +477,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 2),
                 Text(
                   _isAlarmEnabled
-                      ? 'Rings immediately for Bangalore Printer & Cartridge tenders'
+                      ? 'Rings immediately for newly discovered matching tenders'
                       : 'Silent mode. Visual notifications will continue.',
                   style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
@@ -753,7 +753,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 10),
 
           // Location & Date Pills
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -762,31 +764,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     const Icon(Icons.location_on, color: Colors.redAccent, size: 12),
                     const SizedBox(width: 4),
                     Text(
-                      '${bid.consigneeCity.isEmpty ? "Bangalore" : bid.consigneeCity}, ${bid.consigneeState}',
+                      bid.displayLocation,
                       style: const TextStyle(fontSize: 11, color: Colors.white70),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
+              if (bid.publishedDate != 'Not available')
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.calendar_today, color: Colors.blueAccent, size: 11),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Pub: ${bid.publishedDate}',
+                        style: const TextStyle(fontSize: 11, color: Colors.white70),
+                      ),
+                    ],
+                  ),
+                ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isMatched ? Colors.amber.withOpacity(0.12) : Colors.white.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.access_time, size: 12, color: isMatched ? Colors.amberAccent : Colors.white38),
                     const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        'End: $dateStr',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: isMatched ? FontWeight.bold : FontWeight.normal,
-                          color: isMatched ? Colors.amberAccent : Colors.white38,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      bid.endDateFormatted != 'Not available'
+                          ? 'Deadline: ${bid.endDateFormatted} ${bid.timeRemaining.isNotEmpty ? "(${bid.timeRemaining})" : ""}'
+                          : 'End: $dateStr',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: isMatched ? FontWeight.bold : FontWeight.normal,
+                        color: isMatched ? Colors.amberAccent : Colors.white70,
                       ),
                     ),
                   ],

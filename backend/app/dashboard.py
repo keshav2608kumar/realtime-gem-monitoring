@@ -1,24 +1,30 @@
 """
-GeM BidWatch — Executive Live Web Dashboard
-Clean, clutter-free, professional real-time monitoring interface for GeM Tenders.
-Target: Bangalore / Karnataka — Printers, Toner Cartridges, Refilling & Consumables.
+GeM BidWatch — Executive Enterprise Dashboard
+Real-time 24/7 Procurement Monitoring with Accurate Administrative Locations,
+Timezone-Aware IST Timestamps, Strict Lifecycle Segregation, and Vector Branding.
 """
+from fastapi import APIRouter
+from fastapi.responses import HTMLResponse
 
-DASHBOARD_HTML = r"""<!DOCTYPE html>
+router = APIRouter(tags=["Dashboard"])
+
+DASHBOARD_HTML = """<!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GeM BidWatch — 24/7 Bangalore Tenders Live Monitor</title>
+  <title>GeM BidWatch — Enterprise Procurement Radar</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><path d='M24 4L8 10V22C8 31.5 14.8 40.3 24 43C33.2 40.3 40 31.5 40 22V10L24 4Z' fill='%230B132B' stroke='%233B82F6' stroke-width='2.2'/><circle cx='24' cy='11' r='4' fill='%23EF4444'/></svg>">
   
-  <!-- Fonts & Icons -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Inter & JetBrains Mono Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -29,390 +35,409 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
             mono: ['JetBrains Mono', 'monospace'],
           },
           colors: {
-            slate: {
-              850: '#111827',
-              900: '#0B1120',
-              925: '#070C18',
-              950: '#030712',
+            brand: {
+              50: '#eff6ff',
+              500: '#3b82f6',
+              600: '#2563eb',
+              900: '#1e3a8a',
             }
           }
         }
       }
     }
   </script>
-
   <style>
-    body {
-      background: radial-gradient(circle at 50% 0%, #0d1a33 0%, #060a14 50%, #03060c 100%);
-      min-height: 100vh;
-      color: #f1f5f9;
-      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    body { font-feature-settings: "cv02", "cv03", "cv04", "cv11"; }
+    @keyframes pulseRadar {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 1; filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.7)); }
+      100% { transform: scale(0.95); opacity: 0.8; }
     }
-    .glass-panel {
-      background: rgba(11, 17, 32, 0.75);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-    }
-    .custom-scrollbar::-webkit-scrollbar {
-      height: 6px;
-      width: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: #0b1120;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #1e293b;
-      border-radius: 9999px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: #334155;
-    }
-    @keyframes siren-glow {
-      0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4), inset 0 0 15px rgba(239, 68, 68, 0.2); }
-      50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.8), inset 0 0 25px rgba(239, 68, 68, 0.4); }
-    }
-    .siren-active {
-      animation: siren-glow 2s infinite ease-in-out;
-    }
+    .radar-pulse { animation: pulseRadar 2s infinite ease-in-out; }
   </style>
 </head>
-<body class="font-sans antialiased selection:bg-red-500 selection:text-white">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-red-500 selection:text-white">
 
   <!-- TOP EXECUTIVE NAVBAR -->
-  <header class="border-b border-slate-800/80 glass-panel sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+  <header class="border-b border-slate-800/80 bg-slate-900/95 sticky top-0 z-40 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       
-      <!-- Logo & Live Indicator -->
-      <div class="flex items-center space-x-3 min-w-0">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 to-rose-500 flex items-center justify-center text-white shadow-lg shadow-red-600/30 flex-shrink-0">
-          <i class="fa-solid fa-radar text-lg animate-pulse"></i>
+      <!-- Logo & System Identity -->
+      <div class="flex items-center gap-3.5">
+        <div class="w-10 h-10 rounded-xl bg-slate-950 border border-blue-500/30 flex items-center justify-center shadow-lg shadow-blue-500/10">
+          <svg class="w-7 h-7" viewBox="0 0 48 48" fill="none">
+            <path d="M24 4L8 10V22C8 31.5 14.8 40.3 24 43C33.2 40.3 40 31.5 40 22V10L24 4Z" fill="#0B132B" stroke="#3B82F6" stroke-width="2.5" stroke-linejoin="round"/>
+            <path d="M14 22C17 18 20.5 16 24 16C27.5 16 31 18 34 22" stroke="#EF4444" stroke-width="2.2" stroke-linecap="round"/>
+            <rect x="18" y="21" width="12" height="15" rx="1.5" fill="#1E293B" stroke="#F8FAFC" stroke-width="1.8"/>
+            <line x1="21" y1="25" x2="27" y2="25" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="21" y1="29" x2="27" y2="29" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round"/>
+            <circle cx="24" cy="10" r="3.2" fill="#EF4444" class="radar-pulse"/>
+          </svg>
         </div>
-        <div class="min-w-0">
-          <div class="flex items-center space-x-2">
-            <span class="text-base sm:text-lg font-black tracking-tight text-white font-mono">GeM BidWatch</span>
-            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-ping"></span>
-              24/7 LIVE
-            </span>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-base sm:text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">GeM BidWatch</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">PRO v2.0</span>
           </div>
-          <p class="text-[11px] text-slate-400 truncate">Bangalore &amp; Karnataka &bull; Printers, Cartridges &amp; Consumables</p>
+          <p class="text-[11px] text-slate-400 hidden sm:block">Government e-Marketplace Enterprise Procurement Radar</p>
         </div>
       </div>
 
-      <!-- Controls: Alarm Mute/Unmute, Auto-Sync, Download APK -->
-      <div class="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
-        
-        <!-- Alarm Sound Toggle Button -->
-        <button id="btnAlarmToggle" onclick="toggleAlarmSound()" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20" title="Click to Toggle Siren Sound">
-          <i id="alarmIcon" class="fa-solid fa-volume-high"></i>
-          <span id="alarmStatusText" class="hidden sm:inline">Siren Sound: ON</span>
-        </button>
-
-        <!-- Auto-Refresh Indicator -->
-        <div class="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-400">
-          <i class="fa-solid fa-rotate-right fa-spin text-slate-500 text-[10px]"></i>
-          <span>Syncing in <strong id="refreshTimer" class="text-slate-200 font-mono">15s</strong></span>
+      <!-- Controls & Siren Toggle -->
+      <div class="flex items-center gap-3">
+        <!-- Live Countdown -->
+        <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+          <span>Next Scan: <strong id="refreshTimer" class="text-slate-200 font-mono">15s</strong></span>
         </div>
 
-        <!-- Manual Poll Button -->
-        <button onclick="triggerManualScan()" class="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5" title="Scan GeM Immediately">
-          <i id="scanIcon" class="fa-solid fa-arrows-rotate"></i>
-          <span class="hidden sm:inline">Scan Now</span>
+        <!-- Audio Siren Toggle -->
+        <button id="btnAlarmToggle" onclick="toggleAudioAlarm()" class="px-3 py-1.5 rounded-lg text-xs font-bold border transition flex items-center gap-2 bg-red-950/40 text-red-400 border-red-500/30 hover:bg-red-900/50">
+          <i id="alarmIcon" class="fa-solid fa-volume-high"></i>
+          <span id="alarmText" class="hidden sm:inline">Siren: ON</span>
         </button>
 
-        <!-- Download APK Button -->
-        <a href="https://github.com/keshav2608kumar/realtime-gem-monitoring/releases/download/v1.0.0/GeM_BidWatch.apk" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-950/50 flex items-center gap-1.5 transition">
+        <!-- Refresh Button -->
+        <button onclick="triggerImmediateRefresh()" title="Trigger GeM Poller" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+          <i id="refreshIcon" class="fa-solid fa-arrows-rotate text-xs"></i>
+        </button>
+
+        <!-- Android APK Download Link -->
+        <a href="https://github.com/keshav2608kumar/realtime-gem-monitoring/releases/download/v1.0.0/GeM_BidWatch.apk" target="_blank" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 shadow-md shadow-blue-600/30 transition">
           <i class="fa-brands fa-android text-sm"></i>
-          <span class="hidden sm:inline">Download APK</span>
+          <span class="hidden sm:inline">Get APK</span>
         </a>
       </div>
 
     </div>
   </header>
 
-  <!-- MAIN CONTAINER -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+  <!-- MAIN DASHBOARD CONTENT -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
-    <!-- EXECUTIVE METRICS ROW -->
+    <!-- METRIC METADATA CARDS -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
       
-      <!-- Metric 1: Cloud Engine Status -->
-      <div class="glass-panel rounded-2xl p-4 border border-slate-800 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-lg flex-shrink-0">
+      <!-- Metric 1: System Status -->
+      <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800/80 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Engine Status</p>
+          <p id="statHealth" class="text-base sm:text-lg font-black text-emerald-400 mt-1 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>24/7 Monitoring</span>
+          </p>
+          <p id="statHealthSubtitle" class="text-[10px] text-slate-500 mt-0.5">Continuous 300s Polling</p>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
           <i class="fa-solid fa-server"></i>
         </div>
-        <div class="min-w-0">
-          <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Engine Status</p>
-          <p id="statHealth" class="text-sm sm:text-base font-black text-emerald-400 truncate">24/7 Monitoring</p>
-          <p class="text-[10px] text-slate-500 truncate">Auto-Sync Active</p>
+      </div>
+
+      <!-- Metric 2: Active Tenders in DB -->
+      <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800/80 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Active Bids in DB</p>
+          <p id="statActiveBids" class="text-base sm:text-lg font-black text-white font-mono mt-1">-- Active</p>
+          <p id="statTotalBids" class="text-[10px] text-slate-500 mt-0.5">-- Total Tracked</p>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+          <i class="fa-solid fa-file-invoice"></i>
         </div>
       </div>
 
-      <!-- Metric 2: Region -->
-      <div class="glass-panel rounded-2xl p-4 border border-slate-800 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 text-lg flex-shrink-0">
-          <i class="fa-solid fa-location-dot"></i>
+      <!-- Metric 3: Fired Alerts (Accurate Persisted DB Count) -->
+      <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800/80 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Fired Alerts</p>
+          <p id="statAlerts" class="text-base sm:text-lg font-black text-red-400 font-mono mt-1">-- Alerts</p>
+          <p id="statUnackAlerts" class="text-[10px] text-red-400/80 mt-0.5">-- Pending Action</p>
         </div>
-        <div class="min-w-0">
-          <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Target Region</p>
-          <p class="text-sm sm:text-base font-black text-white truncate">Bangalore Urban</p>
-          <p class="text-[10px] text-slate-500 truncate">KARNATAKA, India</p>
-        </div>
-      </div>
-
-      <!-- Metric 3: Target Category -->
-      <div class="glass-panel rounded-2xl p-4 border border-slate-800 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-lg flex-shrink-0">
-          <i class="fa-solid fa-print"></i>
-        </div>
-        <div class="min-w-0">
-          <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Target Scope</p>
-          <p class="text-sm sm:text-base font-black text-amber-300 truncate">Printers &amp; Toners</p>
-          <p class="text-[10px] text-slate-500 truncate">Cartridges &amp; Refilling</p>
-        </div>
-      </div>
-
-      <!-- Metric 4: Live Target Bids -->
-      <div class="glass-panel rounded-2xl p-4 border border-slate-800 flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 text-lg flex-shrink-0">
+        <div class="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
           <i class="fa-solid fa-bell"></i>
         </div>
-        <div class="min-w-0">
-          <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Target Tenders</p>
-          <p id="statBidsCount" class="text-sm sm:text-base font-black text-rose-400 truncate">15 Verified</p>
-          <p id="statAlerts" class="text-[10px] text-slate-500 truncate">15 Alerts Live</p>
+      </div>
+
+      <!-- Metric 4: Expired Tenders -->
+      <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800/80 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Expired Bids</p>
+          <p id="statExpiredBids" class="text-base sm:text-lg font-black text-slate-400 font-mono mt-1">-- Expired</p>
+          <p class="text-[10px] text-slate-500 mt-0.5">Excluded from Active Feed</p>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400">
+          <i class="fa-solid fa-calendar-xmark"></i>
         </div>
       </div>
 
     </div>
 
-    <!-- URGENT ACTIVE ALERT BANNER (High Visibility) -->
-    <div id="activeAlertBanner" class="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-red-950 via-slate-900 to-red-950 border-2 border-red-500 shadow-xl siren-active flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div class="flex items-start sm:items-center gap-3.5 min-w-0">
-        <div class="w-11 h-11 rounded-xl bg-red-600 text-white flex items-center justify-center text-lg flex-shrink-0 shadow-lg shadow-red-600/50 animate-pulse">
-          <i class="fa-solid fa-triangle-exclamation"></i>
-        </div>
-        <div class="min-w-0">
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="px-2 py-0.5 rounded text-[10px] font-black bg-red-600 text-white tracking-wider uppercase">
-              🚨 TARGET MATCH DETECTED
-            </span>
-            <span id="bannerBidNo" class="font-mono font-bold text-white text-sm select-all">GEM/2026/B/8123875</span>
-            <span id="bannerLocation" class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">Bangalore Urban</span>
+    <!-- ACTIVE EMERGENCY BANNER -->
+    <div id="activeAlertBanner" class="hidden p-4 rounded-xl bg-gradient-to-r from-red-950/80 via-slate-900 to-slate-900 border-l-4 border-l-red-500 border border-red-900/40 shadow-lg">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div class="flex items-start gap-3">
+          <div class="w-9 h-9 rounded-lg bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-400 flex-shrink-0 mt-0.5">
+            <i class="fa-solid fa-triangle-exclamation text-base"></i>
           </div>
-          
-          <!-- Department & Category -->
-          <div class="mt-1">
-            <p id="bannerDept" class="text-xs font-bold text-sky-300 flex items-center gap-1.5">
-              <i class="fa-solid fa-building-columns text-[10px] text-sky-400"></i>
-              <span>ISRO Satellite Centre (URSC), Bangalore</span>
-            </p>
-            <p id="bannerCategory" class="text-sm font-extrabold text-white mt-0.5">Computer Printer (V2) - Monochrome duplex laser printers</p>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-red-600 text-white">LATEST MATCH</span>
+              <span id="bannerTenderNo" class="font-mono font-bold text-sm text-white">--</span>
+              <span id="bannerLocation" class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-800 text-slate-300">--</span>
+              <span id="bannerStatus" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">ACTIVE</span>
+            </div>
+            <p id="bannerDept" class="text-xs font-semibold text-slate-200 mt-1">--</p>
+            <p id="bannerCat" class="text-xs text-slate-400 mt-0.5 line-clamp-1">--</p>
           </div>
         </div>
-      </div>
-
-      <!-- Deadline & Action Button -->
-      <div class="flex items-center gap-3 flex-shrink-0 self-end md:self-center">
-        <div class="text-right">
-          <p class="text-[10px] uppercase font-bold text-slate-400">Bid Deadline</p>
-          <p id="bannerDeadline" class="text-xs sm:text-sm font-black text-amber-300 font-mono flex items-center gap-1">
-            <i class="fa-solid fa-clock text-amber-400 text-[11px]"></i>
-            <span>16 Nov 2026, 03:00 PM</span>
-          </p>
+        <div class="flex items-center gap-2 self-end sm:self-center">
+          <div class="text-right mr-2 hidden md:block">
+            <p class="text-[10px] uppercase font-bold text-slate-400">Deadline (IST)</p>
+            <p id="bannerDeadline" class="text-xs font-mono font-bold text-amber-300">--</p>
+          </div>
+          <button id="btnBannerAck" onclick="ackCurrentBannerAlert()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 flex items-center gap-1.5">
+            <i class="fa-solid fa-check"></i>
+            <span>Acknowledge</span>
+          </button>
+          <a id="bannerDocLink" href="#" target="_blank" class="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-bold text-white shadow-md shadow-red-600/30 flex items-center gap-1.5">
+            <i class="fa-solid fa-file-pdf"></i>
+            <span>View GeM PDF</span>
+          </a>
         </div>
-        <a id="bannerDocLink" href="https://bidplus.gem.gov.in/showbidDocument/8123875" target="_blank" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-950/60 flex items-center gap-1.5 transition">
-          <i class="fa-solid fa-file-pdf"></i>
-          <span>View GeM PDF</span>
-        </a>
       </div>
     </div>
 
-    <!-- FILTER TOOLBAR -->
-    <div class="glass-panel rounded-2xl p-4 border border-slate-800 space-y-3">
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+    <!-- TENDER FEED CONTROLS & TABLE -->
+    <div class="bg-slate-900/90 rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+      
+      <!-- CONTROLS TOOLBAR: TABS + SEARCH + SORTING -->
+      <div class="p-4 border-b border-slate-800 space-y-3">
         
-        <!-- Search Input -->
-        <div class="relative w-full sm:w-96">
-          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-500 text-xs"></i>
-          <input type="text" id="searchInput" oninput="filterBids()" placeholder="Filter by Tender #, Department, Category..." class="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500 transition shadow-inner">
+        <!-- Row 1: Lifecycle Tabs & Sorting -->
+        <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          
+          <!-- Status Tabs -->
+          <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+            <button onclick="setFeedStatus('active')" id="tabActive" class="px-3 py-1.5 rounded-lg font-bold transition bg-blue-600 text-white shadow">
+              <i class="fa-solid fa-bolt-lightning mr-1 text-[11px]"></i> Active Opportunities
+            </button>
+            <button onclick="setFeedStatus('closing_soon')" id="tabClosingSoon" class="px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white">
+              <i class="fa-solid fa-hourglass-half mr-1 text-[11px] text-amber-400"></i> Closing Soon (&lt;24h)
+            </button>
+            <button onclick="setFeedStatus('expired')" id="tabExpired" class="px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white">
+              <i class="fa-solid fa-archive mr-1 text-[11px]"></i> Expired Archive
+            </button>
+            <button onclick="setFeedStatus('all')" id="tabAll" class="px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white">
+              All Records
+            </button>
+          </div>
+
+          <!-- Sorting Dropdown -->
+          <div class="flex items-center gap-2">
+            <label for="sortBySelect" class="text-xs font-semibold text-slate-400 whitespace-nowrap">
+              <i class="fa-solid fa-arrow-down-wide-short mr-1"></i> Sort:
+            </label>
+            <select id="sortBySelect" onchange="onSortChange()" class="px-3 py-1.5 rounded-xl bg-slate-950 text-slate-200 border border-slate-800 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500">
+              <option value="closing_soonest" selected>Closing Soonest (Default)</option>
+              <option value="latest_published">Latest Published First</option>
+              <option value="oldest_published">Oldest Published First</option>
+              <option value="closing_latest">Closing Latest</option>
+              <option value="newly_added">Newly Ingested First</option>
+              <option value="highest_value">Highest Estimated Value</option>
+              <option value="lowest_value">Lowest Estimated Value</option>
+            </select>
+          </div>
+
         </div>
 
-        <!-- Category Filter Chips with Live Badges -->
-        <div class="flex items-center space-x-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 custom-scrollbar">
-          <button onclick="setCategoryFilter('')" class="cat-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-red-600 text-white shadow-md shadow-red-600/30 flex items-center gap-1.5 flex-shrink-0" data-cat="">
-            <span>All Target Tenders</span>
-            <span id="countAll" class="px-1.5 py-0.2 rounded-full text-[10px] bg-black/40 text-slate-200">15</span>
-          </button>
-          <button onclick="setCategoryFilter('printer')" class="cat-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800 flex items-center gap-1.5 flex-shrink-0" data-cat="printer">
-            <span>Printers</span>
-            <span id="countPrinter" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-amber-300">0</span>
-          </button>
-          <button onclick="setCategoryFilter('toner')" class="cat-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800 flex items-center gap-1.5 flex-shrink-0" data-cat="toner">
-            <span>Toner Cartridges</span>
-            <span id="countToner" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-amber-300">0</span>
-          </button>
-          <button onclick="setCategoryFilter('refill')" class="cat-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800 flex items-center gap-1.5 flex-shrink-0" data-cat="refill">
-            <span>Refilling &amp; Maint.</span>
-            <span id="countRefill" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-amber-300">0</span>
-          </button>
-          <button onclick="setCategoryFilter('ink')" class="cat-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800 flex items-center gap-1.5 flex-shrink-0" data-cat="ink">
-            <span>Ink &amp; Drum</span>
-            <span id="countInk" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-amber-300">0</span>
-          </button>
+        <!-- Row 2: Category Filters & Search Input -->
+        <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-1">
+          
+          <!-- Category Quick Filters -->
+          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+            <button onclick="setCategoryFilter('')" data-cat="" class="cat-btn px-2.5 py-1 rounded-lg font-semibold bg-red-600 text-white flex-shrink-0">
+              All Target Categories
+            </button>
+            <button onclick="setCategoryFilter('printer')" data-cat="printer" class="cat-btn px-2.5 py-1 rounded-lg font-semibold bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800 flex-shrink-0">
+              Printers & MFP
+            </button>
+            <button onclick="setCategoryFilter('toner')" data-cat="toner" class="cat-btn px-2.5 py-1 rounded-lg font-semibold bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800 flex-shrink-0">
+              Toner & Cartridges
+            </button>
+            <button onclick="setCategoryFilter('refill')" data-cat="refill" class="cat-btn px-2.5 py-1 rounded-lg font-semibold bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800 flex-shrink-0">
+              Refill & Maintenance
+            </button>
+            <button onclick="setCategoryFilter('ink')" data-cat="ink" class="cat-btn px-2.5 py-1 rounded-lg font-semibold bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800 flex-shrink-0">
+              OEM Ink & Drums
+            </button>
+          </div>
+
+          <!-- Multi-Search Input -->
+          <div class="relative w-full md:w-80">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+            <input type="text" id="searchInput" oninput="onSearchInput()" placeholder="Filter Tender #, Dept, City, Item..." class="w-full pl-9 pr-8 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500">
+            <button onclick="clearSearch()" id="btnClearSearch" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
         </div>
 
       </div>
-    </div>
 
-    <!-- MAIN TENDERS TABLE (CLEAN, PROPERLY ALIGNED) -->
-    <div class="glass-panel rounded-2xl overflow-hidden border border-slate-800 shadow-2xl">
-      <div class="overflow-x-auto custom-scrollbar">
+      <!-- TENDER DATA TABLE -->
+      <div class="overflow-x-auto">
         <table class="w-full text-left text-xs">
-          <thead class="bg-slate-900/90 border-b border-slate-800 text-slate-400 uppercase tracking-wider font-bold">
+          <thead class="bg-slate-950 text-slate-400 uppercase font-bold text-[10px] tracking-wider border-b border-slate-800">
             <tr>
-              <th class="py-3.5 px-4 w-48">Tender / Bid #</th>
-              <th class="py-3.5 px-4 min-w-[220px]">Procuring Department</th>
-              <th class="py-3.5 px-4 min-w-[260px]">Item Description &amp; Category</th>
-              <th class="py-3.5 px-4 w-36">Location</th>
-              <th class="py-3.5 px-4 w-44">Bid Deadline</th>
-              <th class="py-3.5 px-4 text-right w-28">Action</th>
+              <th class="py-3 px-4 w-44">Tender Number</th>
+              <th class="py-3 px-4 w-64">Procuring Department</th>
+              <th class="py-3 px-4 min-w-[200px]">Item & Category</th>
+              <th class="py-3 px-4 w-40">Delivery Location</th>
+              <th class="py-3 px-4 w-36">Published Date (IST)</th>
+              <th class="py-3 px-4 w-44">Bid Deadline (IST)</th>
+              <th class="py-3 px-4 w-28 text-center">Action</th>
             </tr>
           </thead>
-          <tbody id="bidsTableBody" class="divide-y divide-slate-800/60 font-medium">
+          <tbody id="bidsTableBody" class="divide-y divide-slate-800/60 font-sans">
             <tr>
-              <td colspan="6" class="py-16 text-center text-slate-500">
-                <i class="fa-solid fa-spinner fa-spin text-2xl text-red-500 mb-3 block"></i>
-                <p class="font-semibold text-slate-300">Loading verified Bangalore tenders...</p>
-                <p class="text-[11px] text-slate-500 mt-1">Connecting to GeM BidWatch engine</p>
+              <td colspan="7" class="py-14 text-center text-slate-400">
+                <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-500 mb-2 block"></i>
+                <span>Loading verified GeM tenders...</span>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
+
+      <!-- TABLE FOOTER / PAGINATION SUMMARY -->
+      <div class="p-3 bg-slate-950/60 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400 px-4">
+        <div>
+          Showing <span id="lblShownCount" class="font-bold text-white">0</span> of <span id="lblFilteredCount" class="font-bold text-white">0</span> tenders
+        </div>
+        <div class="flex items-center gap-2">
+          <span>Source: <strong>Government e-Marketplace (GeM India)</strong></span>
+        </div>
+      </div>
+
     </div>
 
   </main>
 
-  <!-- CLEAN FOOTER -->
-  <footer class="border-t border-slate-800/80 bg-slate-925 py-4 text-xs text-slate-500 mt-12">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
-      <p>GeM BidWatch &bull; Real-time 24/7 Bidding Alert Engine for Government e-Marketplace (GeM India)</p>
-      <p class="font-mono text-slate-600">Bangalore Target Edition v2.0</p>
-    </div>
-  </footer>
-
-  <!-- FULL SCREEN RED SIREN POPUP (Only when target bid triggers) -->
-  <div id="redAlertModal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 hidden">
-    <div class="max-w-md w-full bg-gradient-to-b from-red-950 via-slate-900 to-slate-950 border-2 border-red-500 rounded-3xl p-6 shadow-2xl text-center relative overflow-hidden siren-active">
-      <div class="w-16 h-16 rounded-full bg-red-600 text-white flex items-center justify-center mx-auto text-2xl shadow-xl shadow-red-600/60 animate-bounce mb-3">
+  <!-- RED ALERT SIREN POPUP MODAL -->
+  <div id="redAlertModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border-2 border-red-500 rounded-2xl max-w-lg w-full p-6 shadow-2xl shadow-red-500/20 text-center space-y-4">
+      <div class="w-16 h-16 rounded-full bg-red-600/20 border-2 border-red-500 flex items-center justify-center text-red-500 mx-auto text-2xl radar-pulse">
         <i class="fa-solid fa-bell"></i>
       </div>
-      <h2 class="text-xl font-black text-white uppercase tracking-tight">🚨 TARGET BID MATCH DETECTED!</h2>
-      <p id="modalLocation" class="text-xs text-slate-300 font-semibold mt-1">Bangalore Urban, KARNATAKA</p>
-      
-      <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 text-left my-4 space-y-2">
+      <div>
+        <span class="px-2.5 py-0.5 rounded text-[10px] font-black tracking-widest uppercase bg-red-600 text-white">MATCH ALERT DETECTED</span>
+        <h2 id="modalTenderNo" class="text-xl font-black text-white font-mono mt-2 tracking-tight">--</h2>
+        <p id="modalCategory" class="text-sm font-semibold text-slate-300 mt-1 line-clamp-2">--</p>
+      </div>
+
+      <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-left space-y-2 text-xs">
         <div>
-          <span class="text-[10px] uppercase font-bold text-slate-400">Department</span>
-          <p id="modalDept" class="text-xs font-bold text-sky-300">ISRO Satellite Centre (URSC), Bangalore</p>
+          <span class="text-[10px] font-bold uppercase text-slate-500">Procuring Department</span>
+          <p id="modalDept" class="font-bold text-slate-200 mt-0.5">--</p>
         </div>
-        <div>
-          <span class="text-[10px] uppercase font-bold text-slate-400">Bid Number</span>
-          <p id="modalBidNo" class="text-sm font-black text-white font-mono select-all">GEM/2026/B/8123875</p>
-        </div>
-        <div>
-          <span class="text-[10px] uppercase font-bold text-slate-400">Category</span>
-          <p id="modalCategory" class="text-xs font-semibold text-slate-200">Computer Printer (V2)</p>
-        </div>
-        <div>
-          <span class="text-[10px] uppercase font-bold text-slate-400">Bid End Date / Deadline</span>
-          <p id="modalEndDate" class="text-xs font-black text-amber-300 font-mono">16 Nov 2026, 03:00 PM</p>
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <div>
+            <span class="text-[10px] font-bold uppercase text-slate-500">Verified Location</span>
+            <p id="modalLocation" class="font-semibold text-slate-300 mt-0.5">--</p>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase text-slate-500">Bid Deadline (IST)</span>
+            <p id="modalEndDate" class="font-mono font-bold text-amber-300 mt-0.5">--</p>
+          </div>
         </div>
       </div>
 
-      <div class="space-y-2">
-        <a id="modalDocLink" href="#" target="_blank" class="w-full py-3 rounded-xl text-sm font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white flex items-center justify-center gap-2 shadow-lg transition">
-          <i class="fa-solid fa-file-pdf"></i>
-          <span>Open GeM Official Document</span>
-        </a>
-        <button onclick="dismissSirenModal()" class="w-full py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
-          Silence Siren &amp; Dismiss
+      <div class="flex items-center justify-center gap-3 pt-2">
+        <button onclick="dismissSirenModal()" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition">
+          Dismiss & Mute
         </button>
+        <a id="modalDocLink" href="#" target="_blank" class="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-bold text-white shadow-lg shadow-red-600/30 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-file-pdf"></i>
+          <span>View GeM Document</span>
+        </a>
       </div>
     </div>
   </div>
 
-  <!-- JAVASCRIPT LOGIC -->
+  <!-- JAVASCRIPT APP LOGIC -->
   <script>
+    // Global State
+    let currentFeedStatus = 'active'; // 'active', 'closing_soon', 'expired', 'all'
+    let currentSortBy = 'closing_soonest';
+    let currentCategoryFilter = '';
+    let searchQuery = '';
     let allBids = [];
-    let activeCategoryFilter = '';
-    let isAudioAlarmEnabled = true;
+    let activeAlertId = null;
+
+    // Siren Audio Context
     let audioCtx = null;
     let sirenOsc = null;
     let sirenGain = null;
     let sirenTimer = null;
-    let countdownSecs = 15;
+    let audioMuted = false;
 
-    // --- AUDIO SIREN SYNTHESIZER ---
-    function toggleAlarmSound() {
-      isAudioAlarmEnabled = !isAudioAlarmEnabled;
+    function getAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      return audioCtx;
+    }
+
+    function toggleAudioAlarm() {
+      audioMuted = !audioMuted;
       const btn = document.getElementById('btnAlarmToggle');
       const icon = document.getElementById('alarmIcon');
-      const txt = document.getElementById('alarmStatusText');
-      if (isAudioAlarmEnabled) {
-        btn.className = "px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20";
-        icon.className = "fa-solid fa-volume-high";
-        txt.textContent = "Siren Sound: ON";
-      } else {
+      const text = document.getElementById('alarmText');
+
+      if (audioMuted) {
         stopAudioSiren();
-        btn.className = "px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700";
+        btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold border transition flex items-center gap-2 bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700";
         icon.className = "fa-solid fa-volume-xmark";
-        txt.textContent = "Siren Sound: MUTED";
+        text.textContent = "Siren: MUTED";
+      } else {
+        btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold border transition flex items-center gap-2 bg-red-950/40 text-red-400 border-red-500/30 hover:bg-red-900/50";
+        icon.className = "fa-solid fa-volume-high";
+        text.textContent = "Siren: ON";
       }
     }
 
     function playAudioSiren() {
-      if (!isAudioAlarmEnabled) return;
+      if (audioMuted) return;
       try {
-        if (!audioCtx) {
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-          audioCtx.resume();
-        }
-        if (sirenOsc) return; // already playing
+        const ctx = getAudioContext();
+        if (ctx.state === 'suspended') ctx.resume();
+        if (sirenOsc) return;
 
-        sirenOsc = audioCtx.createOscillator();
-        sirenGain = audioCtx.createGain();
+        sirenOsc = ctx.createOscillator();
+        sirenGain = ctx.createGain();
         sirenOsc.type = 'sawtooth';
-        sirenOsc.frequency.setValueAtTime(800, audioCtx.currentTime);
+        sirenOsc.frequency.setValueAtTime(800, ctx.currentTime);
 
         let high = false;
         sirenTimer = setInterval(() => {
           if (!sirenOsc) return;
-          sirenOsc.frequency.setValueAtTime(high ? 800 : 1200, audioCtx.currentTime);
+          sirenOsc.frequency.setValueAtTime(high ? 800 : 1200, ctx.currentTime);
           high = !high;
         }, 350);
 
-        sirenGain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        sirenGain.gain.setValueAtTime(0.25, ctx.currentTime);
         sirenOsc.connect(sirenGain);
-        sirenGain.connect(audioCtx.destination);
+        sirenGain.connect(ctx.destination);
         sirenOsc.start();
       } catch (e) {
-        console.warn('AudioContext notice:', e);
+        console.warn('Audio notice:', e);
       }
     }
 
     function stopAudioSiren() {
-      if (sirenTimer) {
-        clearInterval(sirenTimer);
-        sirenTimer = null;
-      }
+      if (sirenTimer) { clearInterval(sirenTimer); sirenTimer = null; }
       if (sirenOsc) {
-        try {
-          sirenOsc.stop();
-          sirenOsc.disconnect();
-        } catch (e) {}
+        try { sirenOsc.stop(); sirenOsc.disconnect(); } catch (e) {}
         sirenOsc = null;
       }
     }
@@ -422,236 +447,338 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
       document.getElementById('redAlertModal').classList.add('hidden');
     }
 
-    // --- DATA FETCHING & SYNCHRONIZATION ---
+    // --- DATA LOADING ---
     async function loadDashboardData() {
       try {
-        const [hRes, aRes, bRes] = await Promise.allSettled([
+        // Fetch Bids with server-side status & sorting
+        const url = `/bids/?status=${encodeURIComponent(currentFeedStatus)}&sort_by=${encodeURIComponent(currentSortBy)}&limit=200`;
+        const [bidsRes, statsRes, alertsRes, healthRes] = await Promise.allSettled([
+          fetch(url).then(r => r.ok ? r.json() : []),
+          fetch('/bids/summary/stats').then(r => r.ok ? r.json() : null),
+          fetch('/alerts/stats').then(r => r.ok ? r.json() : null),
           fetch('/health/').then(r => r.ok ? r.json() : null),
-          fetch('/alerts/?limit=20').then(r => r.ok ? r.json() : null),
-          fetch('/bids/?limit=100').then(r => r.ok ? r.json() : null)
         ]);
 
-        if (hRes.status === 'fulfilled' && hRes.value) {
-          const h = hRes.value;
-          document.getElementById('statHealth').textContent = h.monitor_running ? '24/7 Monitoring' : 'Paused';
+        if (bidsRes.status === 'fulfilled') {
+          allBids = bidsRes.value || [];
+          renderBidsTable();
         }
 
-        if (aRes.status === 'fulfilled' && aRes.value) {
-          const alerts = aRes.value;
-          document.getElementById('statAlerts').textContent = `${alerts.length} Alerts Live`;
-          if (alerts.length > 0) {
-            renderActiveBanner(alerts[0]);
+        // Exact DB summary counts
+        if (statsRes.status === 'fulfilled' && statsRes.value) {
+          const s = statsRes.value;
+          document.getElementById('statActiveBids').textContent = `${s.active_bids} Active`;
+          document.getElementById('statTotalBids').textContent = `${s.total_bids} Total Tracked`;
+          document.getElementById('statExpiredBids').textContent = `${s.expired_bids} Expired`;
+        }
+
+        // Exact Alert Stats
+        if (alertsRes.status === 'fulfilled' && alertsRes.value) {
+          const a = alertsRes.value;
+          document.getElementById('statAlerts').textContent = `${a.total_alerts} Alerts`;
+          document.getElementById('statUnackAlerts').textContent = `${a.unacknowledged_alerts} Pending Action`;
+        }
+
+        // Engine Status
+        if (healthRes.status === 'fulfilled' && healthRes.value) {
+          const h = healthRes.value;
+          document.getElementById('statHealth').innerHTML = h.monitor_running
+            ? `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span>24/7 Monitoring</span>`
+            : `<span class="w-2 h-2 rounded-full bg-amber-500"></span><span>Engine Paused</span>`;
+        }
+
+        // Check if there is an unacknowledged alert to trigger banner/siren
+        checkUnacknowledgedAlerts();
+
+      } catch (err) {
+        console.error('Dashboard load error:', err);
+      }
+    }
+
+    async function checkUnacknowledgedAlerts() {
+      try {
+        const res = await fetch('/alerts/?limit=1&unacknowledged_only=true');
+        if (!res.ok) return;
+        const alerts = await res.json();
+        if (alerts && alerts.length > 0) {
+          const topAlert = alerts[0];
+          activeAlertId = topAlert.id;
+          const bid = topAlert.bid;
+          if (bid) {
+            renderActiveBanner(topAlert, bid);
+            // Trigger siren only for unacknowledged alerts
+            playAudioSiren();
           }
         }
-
-        if (bRes.status === 'fulfilled' && bRes.value) {
-          allBids = bRes.value;
-          document.getElementById('statBidsCount').textContent = `${allBids.length} Verified`;
-          updateCategoryCountBadges();
-          filterBids();
-        }
-      } catch (err) {
-        console.error('Data load error:', err);
+      } catch (e) {
+        console.warn('Alerts check error:', e);
       }
     }
 
-    function renderActiveBanner(alert) {
-      if (!alert || !alert.bid) return;
-      const b = alert.bid;
-      const banner = document.getElementById('activeAlertBanner');
-      if (!banner) return;
-
-      document.getElementById('bannerBidNo').textContent = b.bid_number;
-      document.getElementById('bannerDept').innerHTML = `<i class="fa-solid fa-building-columns text-[10px] text-sky-400"></i> <span>${escapeHtml(b.dept_name || b.ministry_name || 'Government of Karnataka')}</span>`;
-      document.getElementById('bannerCategory').textContent = b.category_name;
-      document.getElementById('bannerLocation').textContent = `${b.consignee_city || 'Bangalore Urban'}, ${b.consignee_state || 'KARNATAKA'}`;
-
-      const deadline = b.end_date
-        ? new Date(b.end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-        : '16 Nov 2026, 03:00 PM';
-      document.getElementById('bannerDeadline').innerHTML = `<i class="fa-solid fa-clock text-amber-400 text-[11px]"></i> <span>${deadline}</span>`;
-
-      if (b.bid_url) {
-        document.getElementById('bannerDocLink').href = b.bid_url;
-      }
-      banner.classList.remove('hidden');
+    function renderActiveBanner(alert, bid) {
+      document.getElementById('bannerTenderNo').textContent = bid.bid_number || 'Tender Alert';
+      document.getElementById('bannerLocation').textContent = bid.display_location || 'Location Not Available';
+      document.getElementById('bannerDept').textContent = bid.dept_name || bid.ministry_name || 'Government Organization';
+      document.getElementById('bannerCat').textContent = bid.category_name || '';
+      document.getElementById('bannerDeadline').textContent = `${bid.end_date_formatted || 'N/A'} (${bid.time_remaining || ''})`;
+      document.getElementById('bannerDocLink').href = bid.bid_url || '#';
+      document.getElementById('activeAlertBanner').classList.remove('hidden');
     }
 
-    // --- CATEGORY MATCHING & COUNTS ---
-    function matchesCat(category, filterKey) {
-      if (!category) return false;
-      const text = category.toLowerCase();
-      if (filterKey === 'printer') return /\bprinter|mfp/i.test(text);
-      if (filterKey === 'toner') return /\btoner|cartridge|cart/i.test(text);
-      if (filterKey === 'refill') return /refill|roller|maintenance|repair/i.test(text);
-      if (filterKey === 'ink') return /\bink|drum|ribbon/i.test(text);
+    async function ackCurrentBannerAlert() {
+      if (!activeAlertId) return;
+      try {
+        await fetch(`/alerts/${activeAlertId}/ack`, { method: 'POST' });
+        stopAudioSiren();
+        document.getElementById('activeAlertBanner').classList.add('hidden');
+        loadDashboardData();
+      } catch (e) {
+        console.error('Ack error:', e);
+      }
+    }
+
+    // --- TABLE FILTERING & RENDERING ---
+    function matchesCategory(catName, filterKey) {
+      if (!filterKey) return true;
+      if (!catName) return false;
+      const t = catName.toLowerCase();
+      if (filterKey === 'printer') return /\\b(printers?|mfp)\\b/i.test(t);
+      if (filterKey === 'toner') return /\\b(toner|cartridge|c(?:a|ar)tridge)\\b/i.test(t);
+      if (filterKey === 'refill') return /\\b(refill|roller|maintenance|repair)\\b/i.test(t);
+      if (filterKey === 'ink') return /\\b(ink(?:jet|s)?|drum|ribbon)\\b/i.test(t);
       return true;
     }
 
-    function updateCategoryCountBadges() {
-      const elAll = document.getElementById('countAll');
-      const elPrin = document.getElementById('countPrinter');
-      const elTon = document.getElementById('countToner');
-      const elRef = document.getElementById('countRefill');
-      const elInk = document.getElementById('countInk');
+    function renderBidsTable() {
+      const tbody = document.getElementById('bidsTableBody');
+      const q = searchQuery.toLowerCase().trim();
 
-      if (elAll) elAll.textContent = allBids.length;
-      if (elPrin) elPrin.textContent = allBids.filter(b => matchesCat(b.category_name, 'printer')).length;
-      if (elTon) elTon.textContent = allBids.filter(b => matchesCat(b.category_name, 'toner')).length;
-      if (elRef) elRef.textContent = allBids.filter(b => matchesCat(b.category_name, 'refill')).length;
-      if (elInk) elInk.textContent = allBids.filter(b => matchesCat(b.category_name, 'ink')).length;
-    }
-
-    function setCategoryFilter(catKey) {
-      activeCategoryFilter = catKey.toLowerCase();
-      document.querySelectorAll('.cat-filter-btn').forEach(btn => {
-        if (btn.getAttribute('data-cat') === catKey) {
-          btn.className = "cat-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-red-600 text-white shadow-md shadow-red-600/30 flex items-center gap-1.5 flex-shrink-0";
-        } else {
-          btn.className = "cat-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800 flex items-center gap-1.5 flex-shrink-0";
-        }
-      });
-      filterBids();
-    }
-
-    function filterBids() {
-      const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
       let filtered = allBids;
-      if (activeCategoryFilter) {
-        filtered = filtered.filter(b => matchesCat(b.category_name, activeCategoryFilter));
+
+      if (currentCategoryFilter) {
+        filtered = filtered.filter(b => matchesCategory(b.category_name, currentCategoryFilter));
       }
+
       if (q) {
         filtered = filtered.filter(b =>
           (b.bid_number && b.bid_number.toLowerCase().includes(q)) ||
           (b.category_name && b.category_name.toLowerCase().includes(q)) ||
           (b.dept_name && b.dept_name.toLowerCase().includes(q)) ||
-          (b.consignee_city && b.consignee_city.toLowerCase().includes(q))
+          (b.display_location && b.display_location.toLowerCase().includes(q)) ||
+          (b.consignee_city && b.consignee_city.toLowerCase().includes(q)) ||
+          (b.consignee_state && b.consignee_state.toLowerCase().includes(q))
         );
       }
-      renderBids(filtered);
-    }
 
-    function renderBids(bids) {
-      const tbody = document.getElementById('bidsTableBody');
-      if (!bids || bids.length === 0) {
+      document.getElementById('lblShownCount').textContent = filtered.length;
+      document.getElementById('lblFilteredCount').textContent = allBids.length;
+
+      if (!filtered || filtered.length === 0) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="6" class="py-14 text-center text-slate-400">
+            <td colspan="7" class="py-14 text-center text-slate-400">
               <i class="fa-solid fa-filter-circle-xmark text-3xl mb-2 text-slate-600 block"></i>
-              <p class="font-bold text-slate-300">No tenders match selected filter</p>
-              <p class="text-xs text-slate-500 mt-1">Click "All Target Tenders" to view all active Bangalore listings.</p>
+              <p class="font-bold text-slate-300">No tenders match selected criteria</p>
+              <p class="text-xs text-slate-500 mt-1">Try switching tabs or resetting search filters.</p>
             </td>
           </tr>
         `;
         return;
       }
 
-      tbody.innerHTML = bids.map(b => {
-        const cat = escapeHtml(b.category_name);
-        const dept = escapeHtml(b.dept_name || b.ministry_name || 'Government of Karnataka');
+      tbody.innerHTML = filtered.map(b => {
+        const bidNo = escapeHtml(b.bid_number);
+        const dept = escapeHtml(b.dept_name || b.ministry_name || 'Not available from source');
         const min = b.ministry_name && b.ministry_name !== b.dept_name ? escapeHtml(b.ministry_name) : '';
-        const city = escapeHtml(b.consignee_city || 'Bangalore Urban');
-        const state = escapeHtml(b.consignee_state || 'KARNATAKA');
-        const endFormatted = b.end_date
-          ? new Date(b.end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-          : '16 Nov 2026, 03:00 PM';
+        const cat = escapeHtml(b.category_name || 'Unspecified Category');
+        const loc = escapeHtml(b.display_location || 'Not available from source');
+        const pubDate = escapeHtml(b.published_date || 'Not available');
+        const pubTime = b.published_time ? escapeHtml(b.published_time) : '';
+        const endDate = escapeHtml(b.end_date_formatted || 'Not available');
+        const endTime = b.end_time_formatted ? escapeHtml(b.end_time_formatted) : '';
+        const timeRem = escapeHtml(b.time_remaining || '');
+        const isExp = b.bid_status === 'EXPIRED';
+
+        // Provenance & Status Pills
+        const provBadge = b.data_source_classification === 'LIVE_VERIFIED'
+          ? '<span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">LIVE</span>'
+          : '<span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/20">IMPORTED</span>';
+
+        const statusBadge = isExp
+          ? '<span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-slate-800 text-slate-400 border border-slate-700">EXPIRED</span>'
+          : '<span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-red-600/20 text-red-400 border border-red-500/30">MATCH</span>';
+
+        const locBadge = b.location_verification_status === 'VERIFIED'
+          ? '<span class="text-[9px] text-emerald-400" title="Verified Administrative Location"><i class="fa-solid fa-circle-check"></i></span>'
+          : '';
+
+        const rowBg = isExp ? 'bg-slate-950/20 opacity-60 hover:opacity-100 hover:bg-slate-900/40' : 'bg-slate-950/40 hover:bg-slate-900/70';
 
         return `
-          <tr class="hover:bg-slate-900/70 transition bg-slate-950/40">
-            <td class="py-3.5 px-4 font-mono font-bold text-white whitespace-nowrap align-top">
+          <tr class="transition ${rowBg}">
+            <!-- Tender Number & Provenance -->
+            <td class="py-3 px-4 font-mono font-bold text-white whitespace-nowrap align-top">
               <div class="flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-red-500"></span>
-                <span class="select-all tracking-tight">${b.bid_number}</span>
-                <button onclick="copyToClipboard('${b.bid_number}')" class="text-slate-500 hover:text-slate-300 p-1" title="Copy Tender No">
+                <span class="w-2 h-2 rounded-full ${isExp ? 'bg-slate-600' : 'bg-red-500'}"></span>
+                <span class="select-all tracking-tight">${bidNo}</span>
+                <button onclick="copyToClipboard('${bidNo}')" class="text-slate-500 hover:text-slate-300 p-1" title="Copy Tender No">
                   <i class="fa-regular fa-copy text-[10px]"></i>
                 </button>
               </div>
-              <span class="inline-block mt-1 px-1.5 py-0.2 rounded text-[9px] font-black bg-red-600/20 text-red-400 border border-red-500/30">MATCH</span>
+              <div class="flex items-center gap-1 mt-1">
+                ${statusBadge}
+                ${provBadge}
+              </div>
             </td>
-            
-            <td class="py-3.5 px-4 align-top">
-              <div class="font-bold text-slate-100 flex items-center gap-1.5">
-                <i class="fa-solid fa-building text-[11px] text-sky-400 flex-shrink-0"></i>
+
+            <!-- Procuring Department -->
+            <td class="py-3 px-4 align-top">
+              <div class="font-bold text-slate-100 flex items-start gap-1.5">
+                <i class="fa-solid fa-building text-[11px] text-sky-400 flex-shrink-0 mt-0.5"></i>
                 <span class="line-clamp-2">${dept}</span>
               </div>
               ${min ? `<div class="text-[11px] text-slate-400 mt-0.5 line-clamp-1">${min}</div>` : ''}
             </td>
 
-            <td class="py-3.5 px-4 align-top">
+            <!-- Category & Specification -->
+            <td class="py-3 px-4 align-top">
               <div class="font-semibold text-slate-200 line-clamp-2">${cat}</div>
             </td>
 
-            <td class="py-3.5 px-4 whitespace-nowrap align-top">
-              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 text-slate-300 border border-slate-800 text-[11px]">
-                <i class="fa-solid fa-location-dot text-red-400"></i>
-                ${city}
+            <!-- Delivery Location -->
+            <td class="py-3 px-4 whitespace-nowrap align-top">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 text-slate-300 border border-slate-800 text-[11px]">
+                <i class="fa-solid fa-location-dot ${isExp ? 'text-slate-500' : 'text-red-400'}"></i>
+                <span>${loc}</span>
+                ${locBadge}
               </span>
             </td>
 
-            <td class="py-3.5 px-4 whitespace-nowrap font-mono text-xs align-top">
-              <div class="flex items-center gap-1.5 text-amber-300 font-bold">
-                <i class="fa-solid fa-clock text-[10px] text-amber-400"></i>
-                <span>${endFormatted}</span>
-              </div>
+            <!-- Published Date (IST) -->
+            <td class="py-3 px-4 whitespace-nowrap align-top text-slate-300">
+              <div class="font-mono text-[11px] font-semibold">${pubDate}</div>
+              ${pubTime ? `<div class="text-[10px] text-slate-500 font-mono">${pubTime}</div>` : ''}
             </td>
 
-            <td class="py-3.5 px-4 text-right whitespace-nowrap align-top">
-              <a href="${b.bid_url}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition shadow-sm">
-                <i class="fa-solid fa-file-pdf"></i>
-                <span>Open PDF</span>
-              </a>
+            <!-- Bid Deadline (IST) & Time Remaining -->
+            <td class="py-3 px-4 whitespace-nowrap align-top">
+              <div class="font-mono text-[11px] font-bold ${isExp ? 'text-slate-500' : 'text-amber-300'}">${endDate}</div>
+              ${endTime ? `<div class="text-[10px] text-slate-400 font-mono">${endTime}</div>` : ''}
+              ${timeRem ? `<div class="text-[10px] font-semibold ${isExp ? 'text-slate-500' : 'text-emerald-400'} mt-0.5">${timeRem}</div>` : ''}
+            </td>
+
+            <!-- Action Link -->
+            <td class="py-3 px-4 whitespace-nowrap align-top text-center">
+              ${b.bid_url ? `
+                <a href="${b.bid_url}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white border border-slate-700 hover:border-red-500 transition text-[11px] font-bold">
+                  <i class="fa-solid fa-file-pdf"></i>
+                  <span>PDF</span>
+                </a>
+              ` : '<span class="text-slate-600">N/A</span>'}
             </td>
           </tr>
         `;
       }).join('');
     }
 
-    function copyToClipboard(text) {
-      navigator.clipboard.writeText(text);
-      const toast = document.createElement('div');
-      toast.className = 'fixed bottom-5 right-5 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-xl z-50';
-      toast.textContent = `Copied ${text} to clipboard!`;
-      document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 2000);
+    // --- INTERACTION HANDLERS ---
+    function setFeedStatus(status) {
+      currentFeedStatus = status;
+      ['tabActive', 'tabClosingSoon', 'tabExpired', 'tabAll'].forEach(id => {
+        const btn = document.getElementById(id);
+        if ((status === 'active' && id === 'tabActive') ||
+            (status === 'closing_soon' && id === 'tabClosingSoon') ||
+            (status === 'expired' && id === 'tabExpired') ||
+            (status === 'all' && id === 'tabAll')) {
+          btn.className = "px-3 py-1.5 rounded-lg font-bold transition bg-blue-600 text-white shadow";
+        } else {
+          btn.className = "px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white";
+        }
+      });
+      loadDashboardData();
     }
 
-    function escapeHtml(str) {
-      if (!str) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+    function onSortChange() {
+      currentSortBy = document.getElementById('sortBySelect').value;
+      loadDashboardData();
     }
 
-    async function triggerManualScan() {
-      const icon = document.getElementById('scanIcon');
-      icon.classList.add('fa-spin');
-      try {
-        await fetch('/health/trigger-poll', { method: 'POST' });
-        setTimeout(loadDashboardData, 1500);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setTimeout(() => icon.classList.remove('fa-spin'), 1500);
+    function setCategoryFilter(catKey) {
+      currentCategoryFilter = catKey.toLowerCase();
+      document.querySelectorAll('.cat-btn').forEach(btn => {
+        if (btn.getAttribute('data-cat') === catKey) {
+          btn.className = "cat-btn px-2.5 py-1 rounded-lg font-semibold bg-red-600 text-white flex-shrink-0";
+        } else {
+          btn.className = "cat-btn px-2.5 py-1 rounded-lg font-semibold bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800 flex-shrink-0";
+        }
+      });
+      renderBidsTable();
+    }
+
+    function onSearchInput() {
+      searchQuery = document.getElementById('searchInput').value;
+      const btnClear = document.getElementById('btnClearSearch');
+      if (searchQuery) {
+        btnClear.classList.remove('hidden');
+      } else {
+        btnClear.classList.add('hidden');
       }
+      renderBidsTable();
     }
 
-    // --- AUTO-REFRESH TIMER LOOP ---
+    function clearSearch() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('btnClearSearch').classList.add('hidden');
+      searchQuery = '';
+      renderBidsTable();
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-4 right-4 z-50 bg-slate-900 border border-blue-500 text-white px-4 py-2 rounded-xl shadow-xl text-xs font-mono font-bold flex items-center gap-2';
+        toast.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i> Tender # Copied: ' + text;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2200);
+      });
+    }
+
+    function triggerImmediateRefresh() {
+      const icon = document.getElementById('refreshIcon');
+      icon.classList.add('fa-spin');
+      fetch('/health/trigger-poll', { method: 'POST' }).finally(() => {
+        setTimeout(loadDashboardData, 1200);
+        setTimeout(() => icon.classList.remove('fa-spin'), 1500);
+      });
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
+
+    // --- AUTO-REFRESH TIMER LOOP (15 Seconds) ---
+    let refreshSeconds = 15;
     setInterval(() => {
-      countdownSecs--;
-      if (countdownSecs <= 0) {
-        countdownSecs = 15;
+      refreshSeconds--;
+      const el = document.getElementById('refreshTimer');
+      if (el) el.textContent = `${refreshSeconds}s`;
+      if (refreshSeconds <= 0) {
+        refreshSeconds = 15;
         loadDashboardData();
       }
-      const el = document.getElementById('refreshTimer');
-      if (el) el.textContent = `${countdownSecs}s`;
     }, 1000);
 
-    // Initial load
+    // Initial Load
     document.addEventListener('DOMContentLoaded', loadDashboardData);
   </script>
+
 </body>
 </html>
 """
+
+@router.get("/dashboard", response_class=HTMLResponse)
+@router.get("/", response_class=HTMLResponse)
+def get_dashboard():
+    return DASHBOARD_HTML

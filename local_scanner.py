@@ -126,7 +126,7 @@ def run_scanner_cycle(session: GemSession, fetcher: GemFetcher):
         for bid, kws in matched_tenders:
             print(f"  TENDER NO: {bid.bid_number}")
             print(f"  CATEGORY:  {bid.category_name}")
-            print(f"  LOCATION:  {bid.consignee_city}, {bid.consignee_state}")
+            print(f"  LOCATION:  {bid.consignee_city or 'Not available'}, {bid.consignee_state or 'Not available'}")
             print(f"  MATCHED:   {', '.join(kws)}")
             print(f"  PDF LINK:  {bid.bid_url}")
             print("-" * 65)

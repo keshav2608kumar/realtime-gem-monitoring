@@ -1,20 +1,23 @@
 """
 GeM BidWatch — FilterMatcher
 Checks if a normalized bid matches a monitoring profile.
-All matching is case-insensitive.
+Uses strict administrative state & city normalization, preventing empty string bugs
+and cross-city false matches.
 """
 import logging
 import re
 from typing import List, Optional
 from app.schemas import BidCreate, ProfileOut
+from app.services.location_normalizer import resolve_state, clean_text, CITY_DISTRICT_TO_STATE
 
 logger = logging.getLogger(__name__)
 
 
 class MatchResult:
-    def __init__(self, matched: bool, matched_keywords: List[str] = None):
+    def __init__(self, matched: bool, matched_keywords: List[str] = None, match_reason: str = ""):
         self.matched = matched
         self.matched_keywords = matched_keywords or []
+        self.match_reason = match_reason
 
     def __bool__(self):
         return self.matched
@@ -22,37 +25,66 @@ class MatchResult:
 
 def match_bid_to_profile(bid: BidCreate, profile: ProfileOut) -> MatchResult:
     """
-    Returns MatchResult indicating whether bid matches profile filters.
+    Returns MatchResult indicating whether bid satisfies profile criteria.
 
-    Matching rules:
-    1. State filter: consignee_state must match profile.state (if defined)
-    2. City filter: consignee_city must match at least one profile.cities (if defined)
-    3. Keyword match: at least one keyword in category_name with word-boundary
-       awareness to prevent false positives (e.g. 'ink' matching 'Drinking water').
-    4. Ministry filter: if set, ministry_name must be in list (optional)
+    Strict Matching Rules:
+    1. State filter: If profile.state is set, bid.consignee_state must match canonical state.
+       A missing bid state will NOT match.
+    2. City filter: If profile.cities is set, bid.consignee_city must match at least one profile city.
+       A missing bid city will NOT match.
+    3. Keyword match: Category name must contain at least one configured keyword with word boundaries.
+    4. Ministry filter: If configured, ministry_name must match allowed ministries.
     """
-    # --- Location Filter: State ---
+    # ─── 1. State Filter ────────────────────────────────────────────────────────
     if profile.state:
-        bid_state = (bid.consignee_state or "").strip().lower()
-        prof_state = profile.state.strip().lower()
-        if prof_state and prof_state != bid_state and prof_state not in bid_state:
-            return MatchResult(False)
+        prof_state_clean = clean_text(profile.state)
+        canonical_prof_state = resolve_state(prof_state_clean) or prof_state_clean.upper()
 
-    # --- Location Filter: Cities ---
-    if profile.cities:
-        bid_city = (bid.consignee_city or "").strip().lower()
+        bid_state_clean = clean_text(bid.consignee_state or bid.buyer_state)
+        if not bid_state_clean:
+            return MatchResult(False, [], "Bid state missing; rejected by state filter")
+
+        canonical_bid_state = resolve_state(bid_state_clean) or bid_state_clean.upper()
+
+        if canonical_prof_state != canonical_bid_state:
+            return MatchResult(
+                False, [],
+                f"State mismatch: Profile requires '{canonical_prof_state}', bid is '{canonical_bid_state}'"
+            )
+
+    # ─── 2. City Filter ─────────────────────────────────────────────────────────
+    if profile.cities and len(profile.cities) > 0:
+        bid_city_clean = clean_text(bid.consignee_city or bid.buyer_city).lower()
+        if not bid_city_clean:
+            return MatchResult(False, [], "Bid city missing; rejected by city filter")
+
+        # Canonical city lookup if available
+        canonical_bid_city = bid_city_clean
+        if bid_city_clean in CITY_DISTRICT_TO_STATE:
+            canonical_bid_city = CITY_DISTRICT_TO_STATE[bid_city_clean][0].lower()
+
         city_matched = False
         for c in profile.cities:
-            c_clean = c.strip().lower()
-            if c_clean and (c_clean == bid_city or c_clean in bid_city or bid_city in c_clean):
+            c_clean = clean_text(c).lower()
+            if not c_clean:
+                continue
+
+            canonical_c = c_clean
+            if c_clean in CITY_DISTRICT_TO_STATE:
+                canonical_c = CITY_DISTRICT_TO_STATE[c_clean][0].lower()
+
+            if canonical_c == canonical_bid_city or c_clean == bid_city_clean:
                 city_matched = True
                 break
+
         if not city_matched:
-            return MatchResult(False)
+            return MatchResult(
+                False, [],
+                f"City mismatch: Bid city '{bid_city_clean}' not in profile cities"
+            )
 
+    # ─── 3. Keyword Filter ──────────────────────────────────────────────────────
     matched_keywords = []
-
-    # --- Keyword Filter ---
     if profile.keywords:
         category_text = bid.category_name or ""
         for kw in profile.keywords:
@@ -60,26 +92,30 @@ def match_bid_to_profile(bid: BidCreate, profile: ProfileOut) -> MatchResult:
             if not kw_clean:
                 continue
 
-            # Use word boundary at beginning to avoid false positives like 'drinking' for 'ink',
-            # and support common spelling variations like 'catridge'/'cartridge'.
             if kw_clean in ("cartridge", "catridge"):
-                pattern = re.compile(r'\bc(?:a|ar)tridge', re.IGNORECASE)
+                pattern = re.compile(r'\bc(?:a|ar)tridge\b', re.IGNORECASE)
+            elif kw_clean == "ink":
+                pattern = re.compile(r'\bink(?:jet|s)?\b', re.IGNORECASE)
+            elif kw_clean == "printer":
+                pattern = re.compile(r'\bprinters?\b|\bmfp\b', re.IGNORECASE)
             else:
-                pattern = re.compile(r'\b' + re.escape(kw_clean), re.IGNORECASE)
+                pattern = re.compile(r'\b' + re.escape(kw_clean) + r'\b', re.IGNORECASE)
+
             if pattern.search(category_text):
                 matched_keywords.append(kw_clean)
 
         if not matched_keywords:
-            return MatchResult(False)
+            return MatchResult(False, [], "No category keywords matched")
 
-    # --- Ministry Filter (optional) ---
+    # ─── 4. Ministry Filter (optional) ──────────────────────────────────────────
     if profile.ministry_filter:
         ministry_lower = (bid.ministry_name or "").lower()
-        allowed = [m.lower() for m in profile.ministry_filter]
-        if not any(m in ministry_lower for m in allowed):
-            return MatchResult(False)
+        allowed = [m.lower().strip() for m in profile.ministry_filter if m.strip()]
+        if allowed and not any(m in ministry_lower for m in allowed):
+            return MatchResult(False, [], "Ministry filter did not match")
 
-    return MatchResult(True, matched_keywords)
+    reason = f"Matched profile '{profile.name}' on keywords: {', '.join(matched_keywords)}"
+    return MatchResult(True, matched_keywords, reason)
 
 
 def keywords_summary(matched_keywords: List[str]) -> str:

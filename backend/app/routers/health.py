@@ -3,23 +3,30 @@ Health Router — System status, monitor health, manual poll trigger
 """
 from fastapi import APIRouter, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, or_, and_
 from typing import List
+from datetime import datetime, timezone
 
 from app.database import get_db
 from app.models import Profile, Bid, Alert, MonitorHealth
 from app.schemas import HealthOut, SystemStatus
 from app.workers.scheduler import get_scheduler_status
+from app.services.datetime_service import UTC_TZ
 
 router = APIRouter(prefix="/health", tags=["Health"])
 
 
 @router.get("/", response_model=SystemStatus)
 def get_system_status(db: Session = Depends(get_db)):
+    now = datetime.now(UTC_TZ)
     total_profiles = db.query(Profile).count()
     active_profiles = db.query(Profile).filter(Profile.is_active == True).count()
     total_bids = db.query(Bid).count()
+    active_bids = db.query(Bid).filter(or_(Bid.end_date == None, Bid.end_date > now)).count()
+    expired_bids = db.query(Bid).filter(and_(Bid.end_date != None, Bid.end_date <= now)).count()
     total_alerts = db.query(Alert).count()
+    unack_alerts = db.query(Alert).filter(Alert.acknowledged == False).count()
+
     last_health = db.query(MonitorHealth).order_by(desc(MonitorHealth.checked_at)).first()
     scheduler = get_scheduler_status()
 
@@ -29,7 +36,10 @@ def get_system_status(db: Session = Depends(get_db)):
         total_profiles=total_profiles,
         active_profiles=active_profiles,
         total_bids_in_db=total_bids,
+        active_bids_in_db=active_bids,
+        expired_bids_in_db=expired_bids,
         total_alerts=total_alerts,
+        unacknowledged_alerts=unack_alerts,
         last_check=last_health.checked_at if last_health else None,
     )
 

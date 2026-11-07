@@ -120,7 +120,9 @@ class GemFetcher:
             resp = data.get("response", {}).get("response", {})
             num_found = resp.get("numFound", 0)
             docs = resp.get("docs", [])
-            raw_bids = [RawBid(doc, state="KARNATAKA", city="Bangalore Urban") for doc in docs]
+            # In keyword search across all India, do NOT hardcode any state/city!
+            # Location must be extracted from the actual record or marked unknown.
+            raw_bids = [RawBid(doc, state=None, city=None) for doc in docs]
             return raw_bids, num_found
         except Exception as e:
             logger.warning(f"Error fetching keyword '{keyword}' page {page}: {e}")

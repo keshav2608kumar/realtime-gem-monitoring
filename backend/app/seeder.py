@@ -1,22 +1,26 @@
 """
 GeM BidWatch — Automatic Startup Seeder
-Guarantees the application never starts in an empty or corrupt state.
-Ensures 100% targeted Bangalore & Karnataka Printer, Cartridge, Toner tenders with complete Department details.
+Guarantees clean startup without empty state or false defaults.
+All baseline bids are explicitly marked as data_source_classification='IMPORTED'
+with verified administrative locations.
 """
 import os
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from app.models import Profile, Bid, Alert
 from app.gem.filter_matcher import match_bid_to_profile, keywords_summary
 from app.schemas import ProfileOut, BidCreate
+from app.services.location_normalizer import normalize_location
+from app.services.datetime_service import parse_datetime
+from app.services.bid_status_service import calculate_bid_status
 
 logger = logging.getLogger(__name__)
 
 
 def seed_initial_data(db: Session):
-    """Seed Profile 1 and baseline target bids/alerts."""
+    """Seed Profile 1 and verified baseline bids/alerts."""
     try:
         # 1. Ensure Profile 1 exists
         profile = db.query(Profile).filter(Profile.name == "Bangalore - Toner & Printer").first()
@@ -32,57 +36,45 @@ def seed_initial_data(db: Session):
             db.add(profile)
             db.commit()
             db.refresh(profile)
-            logger.info("✅ Auto-seeded Profile 1: Bangalore - Toner & Printer")
+            logger.info("Auto-seeded Profile 1: Bangalore - Toner & Printer")
 
-        # 2. Load and upsert curated Bangalore & Karnataka Printer/Cartridge tenders
+        # 2. Load and upsert baseline bids
         json_path = os.path.join(os.path.dirname(__file__), "baseline_bids.json")
         if os.path.exists(json_path):
             with open(json_path, "r", encoding="utf-8") as f:
                 baseline_bids = json.load(f)
 
-            target_gem_ids = {b["gem_bid_id"] for b in baseline_bids}
-
-            # Remove legacy non-target bids (paints, sheds, chemicals) if any
-            non_targets = db.query(Bid).filter(
-                ~Bid.gem_bid_id.in_(target_gem_ids),
-                ~Bid.category_name.ilike("%printer%"),
-                ~Bid.category_name.ilike("%toner%"),
-                ~Bid.category_name.ilike("%cartridge%"),
-            ).all()
-            if non_targets:
-                for nb in non_targets:
-                    db.query(Alert).filter(Alert.bid_id == nb.id).delete()
-                    db.delete(nb)
-                db.commit()
-                logger.info(f"🧹 Cleaned up {len(non_targets)} non-target legacy bids")
-
-            # Upsert target bids
             for b in baseline_bids:
-                start_dt = None
-                end_dt = None
-                if b.get("start_date"):
-                    try:
-                        start_dt = datetime.fromisoformat(str(b["start_date"]).replace("Z", "+00:00"))
-                    except Exception:
-                        pass
-                if b.get("end_date"):
-                    try:
-                        end_dt = datetime.fromisoformat(str(b["end_date"]).replace("Z", "+00:00"))
-                    except Exception:
-                        pass
+                start_dt = parse_datetime(b.get("start_date"))
+                end_dt = parse_datetime(b.get("end_date"))
+                raw_stat = b.get("status", 1)
+                bid_status = calculate_bid_status(end_dt, raw_stat)
+
+                loc = normalize_location(
+                    raw_text=b.get("dept_name"),
+                    city_hint=b.get("consignee_city"),
+                    state_hint=b.get("consignee_state"),
+                )
 
                 existing = db.query(Bid).filter(
                     (Bid.bid_number == b["bid_number"]) | (Bid.gem_bid_id == b["gem_bid_id"])
                 ).first()
+
                 if existing:
                     existing.gem_bid_id = b["gem_bid_id"]
                     existing.bid_number = b["bid_number"]
-                    existing.category_name = b["category_name"]
+                    existing.category_name = b.get("category_name")
                     existing.dept_name = b.get("dept_name")
                     existing.ministry_name = b.get("ministry_name")
-                    existing.consignee_city = b.get("consignee_city", "Bangalore Urban")
-                    existing.consignee_state = b.get("consignee_state", "KARNATAKA")
+                    existing.quantity = b.get("quantity")
+                    existing.start_date = start_dt
                     existing.end_date = end_dt
+                    existing.bid_status = bid_status
+                    existing.consignee_city = loc.city
+                    existing.consignee_state = loc.state
+                    existing.consignee_district = loc.district
+                    existing.location_verification_status = loc.confidence
+                    existing.data_source_classification = "IMPORTED"
                     existing.bid_url = b.get("bid_url")
                 else:
                     new_bid = Bid(
@@ -92,23 +84,28 @@ def seed_initial_data(db: Session):
                         category_name=b.get("category_name"),
                         quantity=b.get("quantity"),
                         bid_type=b.get("bid_type", 1),
-                        status=b.get("status", 1),
+                        status=raw_stat,
                         is_high_value=bool(b.get("is_high_value", False)),
                         ministry_name=b.get("ministry_name"),
                         dept_name=b.get("dept_name"),
                         start_date=start_dt,
                         end_date=end_dt,
-                        consignee_state=b.get("consignee_state", "KARNATAKA"),
-                        consignee_city=b.get("consignee_city", "Bangalore Urban"),
+                        bid_status=bid_status,
+                        consignee_state=loc.state,
+                        consignee_city=loc.city,
+                        consignee_district=loc.district,
+                        raw_location_text=loc.raw_text,
+                        location_verification_status=loc.confidence,
+                        data_source_classification="IMPORTED",
                         bid_url=b.get("bid_url"),
                         cat_id=b.get("cat_id"),
                     )
                     db.add(new_bid)
 
             db.commit()
-            logger.info(f"✅ Verified {len(baseline_bids)} curated target tenders in database")
+            logger.info(f"Verified {len(baseline_bids)} baseline tenders in database")
 
-        # 3. Ensure alerts exist for all target bids
+        # 3. Create alerts for matching bids
         active_profiles = db.query(Profile).filter(Profile.is_active == True).all()
         all_bids = db.query(Bid).all()
         created_alerts = 0
@@ -121,7 +118,7 @@ def seed_initial_data(db: Session):
                 cities=prof.cities,
                 keywords=prof.keywords,
                 poll_interval_seconds=prof.poll_interval_seconds,
-                created_at=prof.created_at,
+                created_at=prof.created_at or datetime.now(timezone.utc),
             )
             for b in all_bids:
                 b_create = BidCreate(
@@ -130,6 +127,8 @@ def seed_initial_data(db: Session):
                     category_name=b.category_name,
                     consignee_state=b.consignee_state,
                     consignee_city=b.consignee_city,
+                    dept_name=b.dept_name,
+                    ministry_name=b.ministry_name,
                 )
                 match = match_bid_to_profile(b_create, p_out)
                 if match.matched:
@@ -139,12 +138,15 @@ def seed_initial_data(db: Session):
                             profile_id=prof.id,
                             bid_id=b.id,
                             matched_keywords=keywords_summary(match.matched_keywords),
-                            notification_sent=False
+                            match_reason=match.match_reason,
+                            status="NEW",
+                            acknowledged=False,
+                            notification_sent=False,
                         )
                         db.add(alert)
                         created_alerts += 1
         db.commit()
         if created_alerts > 0:
-            logger.info(f"✅ Created {created_alerts} new alerts for target tenders")
+            logger.info(f"Created {created_alerts} new alerts for matching bids")
     except Exception as e:
-        logger.error(f"⚠️ Error during auto-seeding: {e}")
+        logger.error(f"Error during auto-seeding: {e}", exc_info=True)

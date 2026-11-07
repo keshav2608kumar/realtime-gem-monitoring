@@ -14,6 +14,15 @@ class BidModel {
   final String consigneeCity;
   final String bidUrl;
   final DateTime firstSeenAt;
+  final String displayLocation;
+  final String publishedDate;
+  final String publishedTime;
+  final String endDateFormatted;
+  final String endTimeFormatted;
+  final String timeRemaining;
+  final String bidStatus;
+  final String dataSourceClassification;
+  final String locationVerificationStatus;
 
   BidModel({
     required this.id,
@@ -31,6 +40,15 @@ class BidModel {
     required this.consigneeCity,
     required this.bidUrl,
     required this.firstSeenAt,
+    required this.displayLocation,
+    required this.publishedDate,
+    required this.publishedTime,
+    required this.endDateFormatted,
+    required this.endTimeFormatted,
+    required this.timeRemaining,
+    required this.bidStatus,
+    required this.dataSourceClassification,
+    required this.locationVerificationStatus,
   });
 
   factory BidModel.fromJson(Map<String, dynamic> json) {
@@ -52,6 +70,15 @@ class BidModel {
       firstSeenAt: json['first_seen_at'] != null
           ? DateTime.tryParse(json['first_seen_at']) ?? DateTime.now()
           : DateTime.now(),
+      displayLocation: json['display_location'] ?? (json['consignee_city'] != null && json['consignee_city'].toString().isNotEmpty ? "${json['consignee_city']}, ${json['consignee_state'] ?? ''}" : 'Not available from source'),
+      publishedDate: json['published_date'] ?? 'Not available',
+      publishedTime: json['published_time'] ?? '',
+      endDateFormatted: json['end_date_formatted'] ?? 'Not available',
+      endTimeFormatted: json['end_time_formatted'] ?? '',
+      timeRemaining: json['time_remaining'] ?? '',
+      bidStatus: json['bid_status'] ?? 'ACTIVE',
+      dataSourceClassification: json['data_source_classification'] ?? 'LIVE_VERIFIED',
+      locationVerificationStatus: json['location_verification_status'] ?? 'UNKNOWN',
     );
   }
 }
@@ -61,6 +88,9 @@ class AlertModel {
   final int profileId;
   final int bidId;
   final String matchedKeywords;
+  final String matchReason;
+  final String status;
+  final bool acknowledged;
   final bool notificationSent;
   final DateTime? notificationSentAt;
   final DateTime createdAt;
@@ -71,6 +101,9 @@ class AlertModel {
     required this.profileId,
     required this.bidId,
     required this.matchedKeywords,
+    required this.matchReason,
+    required this.status,
+    required this.acknowledged,
     required this.notificationSent,
     this.notificationSentAt,
     required this.createdAt,
@@ -83,6 +116,9 @@ class AlertModel {
       profileId: json['profile_id'] ?? 0,
       bidId: json['bid_id'] ?? 0,
       matchedKeywords: json['matched_keywords'] ?? '',
+      matchReason: json['match_reason'] ?? '',
+      status: json['status'] ?? 'NEW',
+      acknowledged: json['acknowledged'] ?? false,
       notificationSent: json['notification_sent'] ?? false,
       notificationSentAt: json['notification_sent_at'] != null
           ? DateTime.tryParse(json['notification_sent_at'])
@@ -144,7 +180,10 @@ class SystemStatusModel {
   final int totalProfiles;
   final int activeProfiles;
   final int totalBidsInDb;
+  final int activeBidsInDb;
+  final int expiredBidsInDb;
   final int totalAlerts;
+  final int unacknowledgedAlerts;
   final DateTime? lastCheck;
 
   SystemStatusModel({
@@ -153,7 +192,10 @@ class SystemStatusModel {
     required this.totalProfiles,
     required this.activeProfiles,
     required this.totalBidsInDb,
+    required this.activeBidsInDb,
+    required this.expiredBidsInDb,
     required this.totalAlerts,
+    required this.unacknowledgedAlerts,
     this.lastCheck,
   });
 
@@ -164,7 +206,10 @@ class SystemStatusModel {
       totalProfiles: json['total_profiles'] ?? 0,
       activeProfiles: json['active_profiles'] ?? 0,
       totalBidsInDb: json['total_bids_in_db'] ?? 0,
+      activeBidsInDb: json['active_bids_in_db'] ?? 0,
+      expiredBidsInDb: json['expired_bids_in_db'] ?? 0,
       totalAlerts: json['total_alerts'] ?? 0,
+      unacknowledgedAlerts: json['unacknowledged_alerts'] ?? 0,
       lastCheck: json['last_check'] != null ? DateTime.tryParse(json['last_check']) : null,
     );
   }

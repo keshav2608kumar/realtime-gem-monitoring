@@ -12,52 +12,9 @@ from sqlalchemy.pool import StaticPool
 TEST_DB_URL = "sqlite:///:memory:"
 
 # Override settings before importing app
-import os
-os.environ["DATABASE_URL"] = TEST_DB_URL
-os.environ["MONITOR_ENABLED"] = "false"  # Don't start scheduler in tests
-
 from app.database import Base, get_db
 from app.main import app
-
-engine = create_engine(
-    TEST_DB_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-def override_get_db():
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    """Create tables before each test, drop after."""
-    # Import all models to ensure they are registered with Base
-    from app.models.bid import Bid          # noqa
-    from app.models.profile import Profile  # noqa
-    from app.models.alert import Alert      # noqa
-    from app.models.device import Device    # noqa
-    from app.models.health import MonitorHealth  # noqa
-    # Also import database Base
-    from app.database import Base as AppBase
-    AppBase.metadata.create_all(bind=engine)
-    yield
-    AppBase.metadata.drop_all(bind=engine)
-
-
-@pytest.fixture
-def client():
-    with TestClient(app) as c:
-        yield c
+from conftest import test_engine as engine, TestingSessionLocal
 
 
 # ─── ROOT ─────────────────────────────────────────────────────────────────────
