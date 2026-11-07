@@ -4,16 +4,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:vibration/vibration.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AlarmService {
   static final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
   static final AudioPlayer _audioPlayer = AudioPlayer();
   static bool _isAlarmActive = false;
+  static bool _isSoundAlarmEnabled = true;
   static Timer? _vibrationTimer;
 
   static const String channelId = 'gem_bid_alerts';
   static const String channelName = 'GeM Bid Loud Alerts';
   static const String channelDesc = 'High priority alarm notifications for matching GeM bids';
+
+  static Future<bool> isAlarmSoundEnabled() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _isSoundAlarmEnabled = prefs.getBool('gem_alarm_sound_enabled') ?? true;
+    } catch (_) {}
+    return _isSoundAlarmEnabled;
+  }
+
+  static Future<void> setAlarmSoundEnabled(bool enabled) async {
+    _isSoundAlarmEnabled = enabled;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('gem_alarm_sound_enabled', enabled);
+    } catch (_) {}
+  }
 
   static Future<void> initialize({required Function(String? payload) onNotificationSelect}) async {
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -57,18 +75,21 @@ class AlarmService {
   }) async {
     _isAlarmActive = true;
 
-    // 1. Play looping alarm sound
-    try {
-      await _audioPlayer.setReleaseMode(ReleaseMode.loop);
-      await _audioPlayer.setVolume(1.0);
-      // Play bundled alarm audio or system sound
-      await _audioPlayer.play(AssetSource('sounds/alarm.mp3'));
-    } catch (_) {
-      // Fallback if asset is missing: system notification sound handles it
-    }
+    final soundEnabled = await isAlarmSoundEnabled();
+    if (soundEnabled) {
+      // 1. Play looping alarm sound
+      try {
+        await _audioPlayer.setReleaseMode(ReleaseMode.loop);
+        await _audioPlayer.setVolume(1.0);
+        // Play bundled alarm audio or system sound
+        await _audioPlayer.play(AssetSource('sounds/alarm.mp3'));
+      } catch (_) {
+        // Fallback if asset is missing: system notification sound handles it
+      }
 
-    // 2. Continuous strong vibration pattern
-    _startVibrationLoop();
+      // 2. Continuous strong vibration pattern
+      _startVibrationLoop();
+    }
 
     // 3. Post full-screen alarm notification
     final androidDetails = AndroidNotificationDetails(

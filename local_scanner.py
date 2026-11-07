@@ -67,6 +67,8 @@ def sync_bids_to_cloud(bids_list: list):
         print(f"  ⚠️ Cloud sync notice: {e} (Local monitoring unaffected)")
 
 
+import re
+
 def run_scanner_cycle(session: GemSession, fetcher: GemFetcher):
     print("\n" + "="*65)
     print(f"🔍 GeM Scan Cycle Started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -74,10 +76,13 @@ def run_scanner_cycle(session: GemSession, fetcher: GemFetcher):
 
     cities = ["BANGALORE", "Bangalore Urban", "BENGALURU URBAN", "Bengaluru"]
     keywords = ["toner", "cartridge", "printer", "ink"]
+    target_re = re.compile(r'\b(printer|toner|c(?:a|ar)tridge|ink(?:jet|s)?|mfp)\b', re.IGNORECASE)
+
     all_normalized_bids = []
     seen_ids = set()
     matched_tenders = []
 
+    # 1. Location-based search (Karnataka / Bangalore)
     for city in cities:
         try:
             raw_bids = fetcher.fetch_all_pages(state="KARNATAKA", city=city, max_pages=3)
@@ -86,18 +91,15 @@ def run_scanner_cycle(session: GemSession, fetcher: GemFetcher):
                 bid = normalize_bid(raw)
                 if not bid or bid.gem_bid_id in seen_ids:
                     continue
-                seen_ids.add(bid.gem_bid_id)
-                all_normalized_bids.append(bid)
-
-                # Check keyword match
-                cat_lower = (bid.category_name or "").lower()
-                matched = [kw for kw in keywords if kw in cat_lower]
-                if matched:
-                    matched_tenders.append((bid, matched))
+                # Only keep genuine printer/cartridge/toner/ink tenders!
+                if target_re.search(bid.category_name or ""):
+                    seen_ids.add(bid.gem_bid_id)
+                    all_normalized_bids.append(bid)
+                    matched_tenders.append((bid, ["target match"]))
         except Exception as e:
             print(f"  ⚠️ Error polling city {city}: {e}")
 
-    # Targeted Keyword Catalog Polling (Toner, Cartridge, Printer, Ink)
+    # 2. Targeted Keyword Catalog Polling (Toner, Cartridge, Printer, Ink)
     print("\n🔍 Polling GeM Real-Time Catalog for Target Keywords...")
     for kw in keywords:
         try:
@@ -107,13 +109,10 @@ def run_scanner_cycle(session: GemSession, fetcher: GemFetcher):
                 bid = normalize_bid(raw)
                 if not bid or bid.gem_bid_id in seen_ids:
                     continue
-                seen_ids.add(bid.gem_bid_id)
-                all_normalized_bids.append(bid)
-
-                cat_lower = (bid.category_name or "").lower()
-                matched = [k for k in keywords if k in cat_lower]
-                if matched:
-                    matched_tenders.append((bid, matched))
+                if target_re.search(bid.category_name or ""):
+                    seen_ids.add(bid.gem_bid_id)
+                    all_normalized_bids.append(bid)
+                    matched_tenders.append((bid, [kw]))
         except Exception as e:
             print(f"  ⚠️ Error polling keyword {kw}: {e}")
 

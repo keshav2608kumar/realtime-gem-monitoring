@@ -25,10 +25,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _activeFilter = '';
   final TextEditingController _searchController = TextEditingController();
 
+  bool _isAlarmEnabled = true;
+
   @override
   void initState() {
     super.initState();
+    _loadAlarmPreference();
     _loadData();
+  }
+
+  Future<void> _loadAlarmPreference() async {
+    final enabled = await AlarmService.isAlarmSoundEnabled();
+    if (mounted) {
+      setState(() => _isAlarmEnabled = enabled);
+    }
   }
 
   @override
@@ -223,6 +233,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 padding: const EdgeInsets.all(14),
                 children: [
                   if (_errorMessage != null) _buildErrorBanner(),
+
+                  // Prominent Alarm ON / OFF Switch Card
+                  _buildAlarmSwitchCard(),
 
                   // Top 4 Metrics Grid
                   _buildExecutiveMetricsGrid(),
@@ -420,6 +433,82 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildAlarmSwitchCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: _isAlarmEnabled ? const Color(0xFF1E0A0A) : const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _isAlarmEnabled ? Colors.redAccent.withOpacity(0.5) : Colors.white12,
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: _isAlarmEnabled ? Colors.redAccent.withOpacity(0.2) : Colors.white10,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              _isAlarmEnabled ? Icons.notifications_active : Icons.notifications_off,
+              color: _isAlarmEnabled ? Colors.redAccent : Colors.white38,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _isAlarmEnabled ? 'LOUD SIREN ALARM: ON' : 'SIREN ALARM: MUTED',
+                  style: TextStyle(
+                    color: _isAlarmEnabled ? Colors.redAccent : Colors.white70,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _isAlarmEnabled
+                      ? 'Rings immediately for Bangalore Printer & Cartridge tenders'
+                      : 'Silent mode. Visual notifications will continue.',
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: _isAlarmEnabled,
+            activeColor: Colors.redAccent,
+            activeTrackColor: Colors.redAccent.withOpacity(0.3),
+            inactiveThumbColor: Colors.white54,
+            inactiveTrackColor: Colors.white10,
+            onChanged: (val) async {
+              setState(() => _isAlarmEnabled = val);
+              await AlarmService.setAlarmSoundEnabled(val);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(val ? '🔊 Siren Alarm Activated (Loud sound on match)' : '🔇 Siren Alarm Muted (Silent Mode)'),
+                    duration: const Duration(seconds: 2),
+                    backgroundColor: val ? Colors.redAccent : const Color(0xFF1E293B),
+                  ),
+                );
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildActionControls() {
     return Row(
       children: [
@@ -601,6 +690,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
             ],
           ),
+
+          // Procuring Department Block (Prominent)
+          if (bid.deptName != null || bid.ministryName != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.blueAccent.withOpacity(0.25)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 1),
+                    child: Icon(Icons.apartment, size: 14, color: Colors.lightBlueAccent),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          bid.deptName ?? bid.ministryName!,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (bid.ministryName != null && bid.ministryName != bid.deptName)
+                          Text(
+                            bid.ministryName!,
+                            style: const TextStyle(color: Colors.white54, fontSize: 10),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
 
           // Category Name

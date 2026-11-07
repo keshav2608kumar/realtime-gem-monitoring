@@ -16,7 +16,7 @@ router = APIRouter(prefix="/bids", tags=["Bids"])
 @router.get("/", response_model=List[BidOut])
 def list_bids(
     skip: int = 0,
-    limit: int = Query(default=20, le=100),
+    limit: int = Query(default=100, le=500),
     state: Optional[str] = None,
     city: Optional[str] = None,
     keyword: Optional[str] = None,
@@ -52,13 +52,25 @@ def batch_sync_bids(bids: List[BidCreate], db: Session = Depends(get_db)):
             continue
         seen_in_batch.add(bid_data.gem_bid_id)
 
-        existing = db.query(Bid).filter(Bid.gem_bid_id == bid_data.gem_bid_id).first()
+        existing = db.query(Bid).filter(
+            (Bid.bid_number == bid_data.bid_number) | (Bid.gem_bid_id == bid_data.gem_bid_id)
+        ).first()
         if existing:
             db_bid = existing
             if bid_data.end_date:
                 existing.end_date = bid_data.end_date
-            if bid_data.category_name and existing.category_name != bid_data.category_name:
+            if bid_data.category_name:
                 existing.category_name = bid_data.category_name
+            if bid_data.dept_name:
+                existing.dept_name = bid_data.dept_name
+            if bid_data.ministry_name:
+                existing.ministry_name = bid_data.ministry_name
+            if bid_data.consignee_city:
+                existing.consignee_city = bid_data.consignee_city
+            if bid_data.consignee_state:
+                existing.consignee_state = bid_data.consignee_state
+            if bid_data.bid_url:
+                existing.bid_url = bid_data.bid_url
         else:
             db_bid = Bid(**bid_data.model_dump())
             db.add(db_bid)
