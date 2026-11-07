@@ -9,6 +9,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
+from sqlalchemy import or_, and_
 from app.models import Profile, Bid, Alert
 from app.gem.filter_matcher import match_bid_to_profile, keywords_summary
 from app.schemas import ProfileOut, BidCreate
@@ -97,7 +98,7 @@ def seed_initial_data(db: Session):
                     existing.location_verification_status = loc.confidence
                     existing.data_source_classification = "IMPORTED"
                     existing.bid_url = b.get("bid_url")
-                    existing.target_location_status = b.get("target_location_status") or loc.target_status or "VERIFIED_BENGALURU_URBAN"
+                    existing.target_location_status = b.get("target_location_status") or loc.target_status or "UNKNOWN"
                     if b.get("pdf_delivery_address"):
                         existing.pdf_delivery_address = b.get("pdf_delivery_address")
                         existing.pdf_delivery_city = b.get("pdf_delivery_city")
@@ -109,23 +110,24 @@ def seed_initial_data(db: Session):
                         existing.pdf_page_number = b.get("pdf_page_number")
                         existing.pdf_extraction_method = b.get("pdf_extraction_method", "PDF_TEXT")
                         existing.pdf_confidence_score = b.get("pdf_confidence_score")
-                        existing.pdf_verification_status = b.get("pdf_verification_status", "UNKNOWN")
+                    existing.pdf_verification_status = b.get("pdf_verification_status", "UNKNOWN")
                     existing.official_source_url = b.get("bid_url")
                     existing.original_pdf_url = b.get("bid_url")
-                    existing.pdf_bid_number = b["bid_number"]
-                    existing.extracted_category = b.get("category_name")
-                    existing.extracted_delivery_address = b.get("pdf_delivery_address")
-                    existing.extracted_city = b.get("pdf_delivery_city")
-                    existing.extracted_district = b.get("pdf_delivery_district")
-                    existing.extracted_state = b.get("pdf_delivery_state")
-                    existing.extracted_pincode = b.get("pdf_delivery_pincode")
-                    existing.extracted_consignee_name = b.get("pdf_delivery_consignee")
+                    existing.pdf_bid_number = b.get("pdf_bid_number")
+                    existing.extracted_category = b.get("extracted_category") or b.get("category_name")
+                    existing.extracted_delivery_address = b.get("extracted_delivery_address") or b.get("pdf_delivery_address")
+                    existing.extracted_city = b.get("extracted_city") or b.get("pdf_delivery_city")
+                    existing.extracted_district = b.get("extracted_district") or b.get("pdf_delivery_district")
+                    existing.extracted_state = b.get("extracted_state") or b.get("pdf_delivery_state")
+                    existing.extracted_pincode = b.get("extracted_pincode") or b.get("pdf_delivery_pincode")
+                    existing.extracted_consignee_name = b.get("extracted_consignee_name") or b.get("pdf_delivery_consignee")
                     existing.original_publication_date = start_dt
                     existing.latest_revised_deadline = rev_end_dt
                     existing.corrigendum_reference = corr_details
                     existing.latest_verified_status = bid_status
                     existing.data_confidence = b.get("pdf_confidence_score") or 0.9
-                    existing.synchronization_status = "SYNCHRONIZED" if b.get("pdf_verification_status") == "VERIFIED" else "PENDING"
+                    existing.synchronization_status = b.get("synchronization_status", "UNKNOWN")
+                    existing.verification_reason = b.get("verification_reason")
                 else:
                     new_bid = Bid(
                         gem_bid_id=b["gem_bid_id"],
@@ -154,7 +156,7 @@ def seed_initial_data(db: Session):
                         consignee_district=loc.district,
                         raw_location_text=loc.raw_text,
                         location_verification_status=loc.confidence,
-                        target_location_status=b.get("target_location_status") or loc.target_status or "VERIFIED_BENGALURU_URBAN",
+                        target_location_status=b.get("target_location_status") or loc.target_status or "UNKNOWN",
                         data_source_classification="IMPORTED",
                         bid_url=b.get("bid_url"),
                         cat_id=b.get("cat_id"),
@@ -171,29 +173,55 @@ def seed_initial_data(db: Session):
                         pdf_verification_status=b.get("pdf_verification_status", "UNKNOWN"),
                         official_source_url=b.get("bid_url"),
                         original_pdf_url=b.get("bid_url"),
-                        pdf_bid_number=b["bid_number"],
-                        extracted_category=b.get("category_name"),
-                        extracted_delivery_address=b.get("pdf_delivery_address"),
-                        extracted_city=b.get("pdf_delivery_city"),
-                        extracted_district=b.get("pdf_delivery_district"),
-                        extracted_state=b.get("pdf_delivery_state"),
-                        extracted_pincode=b.get("pdf_delivery_pincode"),
-                        extracted_consignee_name=b.get("pdf_delivery_consignee"),
+                        pdf_bid_number=b.get("pdf_bid_number"),
+                        extracted_category=b.get("extracted_category") or b.get("category_name"),
+                        extracted_delivery_address=b.get("extracted_delivery_address") or b.get("pdf_delivery_address"),
+                        extracted_city=b.get("extracted_city") or b.get("pdf_delivery_city"),
+                        extracted_district=b.get("extracted_district") or b.get("pdf_delivery_district"),
+                        extracted_state=b.get("extracted_state") or b.get("pdf_delivery_state"),
+                        extracted_pincode=b.get("extracted_pincode") or b.get("pdf_delivery_pincode"),
+                        extracted_consignee_name=b.get("extracted_consignee_name") or b.get("pdf_delivery_consignee"),
                         original_publication_date=start_dt,
                         latest_revised_deadline=rev_end_dt,
                         corrigendum_reference=corr_details,
                         latest_verified_status=bid_status,
                         data_confidence=b.get("pdf_confidence_score") or 0.9,
-                        synchronization_status="SYNCHRONIZED" if b.get("pdf_verification_status") == "VERIFIED" else "PENDING",
+                        synchronization_status=b.get("synchronization_status", "UNKNOWN"),
+                        verification_reason=b.get("verification_reason"),
                     )
                     db.add(new_bid)
 
             db.commit()
             logger.info(f"Verified {len(baseline_bids)} baseline tenders in database")
 
-        # 3. Create alerts for matching bids
+        # 3. Clean up alerts on quarantined / non-verified bids
+        invalid_alerts = db.query(Alert).join(Bid).filter(
+            or_(
+                Bid.target_location_status.not_in(["VERIFIED_BENGALURU_URBAN", "VERIFIED_BENGALURU_CITY"]),
+                Bid.synchronization_status.in_([
+                    "PDF_BID_MISMATCH", "LOCATION_MISMATCH", "DATE_MISMATCH",
+                    "DOCUMENT_VERSION_MISMATCH", "DATA_MISMATCH", "OCR_UNCERTAIN",
+                    "SOURCE_UNAVAILABLE", "UNKNOWN", "PENDING"
+                ]),
+                Bid.pdf_verification_status.in_([
+                    "PDF_BID_MISMATCH", "LOCATION_MISMATCH", "DATE_MISMATCH",
+                    "DOCUMENT_VERSION_MISMATCH", "DATA_MISMATCH", "OCR_UNCERTAIN",
+                    "SOURCE_UNAVAILABLE", "UNKNOWN"
+                ])
+            )
+        ).all()
+        if invalid_alerts:
+            for ia in invalid_alerts:
+                db.delete(ia)
+            db.commit()
+            logger.info(f"Purged {len(invalid_alerts)} invalid alerts for non-verified bids")
+
+        # 4. Create alerts ONLY for genuinely verified bids
         active_profiles = db.query(Profile).filter(Profile.is_active == True).all()
-        all_bids = db.query(Bid).all()
+        verified_bids = db.query(Bid).filter(
+            Bid.target_location_status.in_(["VERIFIED_BENGALURU_URBAN", "VERIFIED_BENGALURU_CITY"]),
+            Bid.synchronization_status.in_(["VERIFIED", "SYNCHRONIZED"])
+        ).all()
         created_alerts = 0
         for prof in active_profiles:
             p_out = ProfileOut(
@@ -206,7 +234,7 @@ def seed_initial_data(db: Session):
                 poll_interval_seconds=prof.poll_interval_seconds,
                 created_at=prof.created_at or datetime.now(timezone.utc),
             )
-            for b in all_bids:
+            for b in verified_bids:
                 b_create = BidCreate(
                     gem_bid_id=b.gem_bid_id,
                     bid_number=b.bid_number,

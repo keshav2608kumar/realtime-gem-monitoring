@@ -102,6 +102,7 @@ def migrate_db():
                     ("verification_timestamp", "TIMESTAMP"),
                     ("data_confidence", "FLOAT"),
                     ("synchronization_status", "VARCHAR(50)"),
+                    ("verification_reason", "TEXT"),
                 ]
                 for col_name, col_type in bid_cols_to_add:
                     if col_name not in existing_bid_cols:
@@ -155,11 +156,25 @@ def migrate_db():
                     SELECT id, pdf_delivery_address, pdf_delivery_city, pdf_delivery_district,
                            pdf_delivery_state, pdf_delivery_pincode, delivery_address, delivery_city,
                            delivery_district, delivery_state, consignee_city, consignee_district,
-                           consignee_state, raw_location_text, dept_name
+                           consignee_state, raw_location_text, dept_name, synchronization_status
                     FROM bids
                 """)
             ).fetchall()
             for b_row in bids_to_loc_backfill:
+                sync_st = b_row[15]
+                if sync_st in ("PDF_BID_MISMATCH", "DOCUMENT_VERSION_MISMATCH", "DATA_MISMATCH", "DATE_MISMATCH"):
+                    conn.execute(
+                        text("UPDATE bids SET target_location_status = 'AMBIGUOUS' WHERE id = :bid_id"),
+                        {"bid_id": b_row[0]}
+                    )
+                    continue
+                elif sync_st == "LOCATION_MISMATCH":
+                    conn.execute(
+                        text("UPDATE bids SET target_location_status = 'OUTSIDE_TARGET' WHERE id = :bid_id"),
+                        {"bid_id": b_row[0]}
+                    )
+                    continue
+
                 b_dict = {
                     "pdf_delivery_address": b_row[1],
                     "pdf_delivery_city": b_row[2],

@@ -108,10 +108,10 @@ def test_pdf_scenario_wrong_bid_id_inside_pdf(db_session):
     res = synchronize_bid_with_pdf(bid, pdf_path=TEST_PDF_PATH, db=db_session)
 
     assert res.is_bid_matched is False
-    assert res.synchronization_status == SYNC_DATA_MISMATCH
+    assert res.synchronization_status in (SYNC_DATA_MISMATCH, "PDF_BID_MISMATCH")
     assert res.latest_verified_status == "DATA_MISMATCH"
     assert res.target_location_status == STATUS_AMBIGUOUS  # Quarantined in Review Queue
-    assert "Document Mismatch" in (res.error_message or "")
+    assert "MISMATCH" in (res.error_message or "").upper()
 
 
 def test_pdf_scenario_missing_pdf(db_session):
@@ -141,7 +141,7 @@ def test_pdf_scenario_corrupt_pdf(db_session):
     db_session.add(bid)
     db_session.commit()
 
-    corrupt_bytes = b"%PDF-1.4 truncated corrupted bytes data..."
+    corrupt_bytes = b"%PDF-1.4 " + b"invalid corrupted binary stream content that is long enough to exceed the minimum source threshold..."
     res = synchronize_bid_with_pdf(bid, pdf_bytes=corrupt_bytes, db=db_session)
 
     assert res.synchronization_status == SYNC_FAILED

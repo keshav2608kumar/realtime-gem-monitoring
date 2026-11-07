@@ -90,6 +90,7 @@ class BidBase(BaseModel):
     verification_timestamp: Optional[datetime] = None
     data_confidence: Optional[float] = None
     synchronization_status: Optional[str] = "PENDING"
+    verification_reason: Optional[str] = None
 
     bid_url: Optional[str] = None
     cat_id: Optional[str] = None

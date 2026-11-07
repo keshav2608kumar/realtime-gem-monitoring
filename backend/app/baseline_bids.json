@@ -33,7 +33,9 @@
     "pdf_page_number": 3,
     "pdf_confidence_score": 0.95,
     "pdf_verification_status": "VERIFIED",
-    "target_location_status": "VERIFIED_BENGALURU_URBAN"
+    "target_location_status": "VERIFIED_BENGALURU_URBAN",
+    "synchronization_status": "VERIFIED",
+    "verification_reason": "VERIFIED: Official GeM PDF document 9993172 confirmed for GEM/2026/B/8123875, Computer Printer (V2), ISRO Headquarters, Bangalore Urban - 560094"
   },
   {
     "gem_bid_id": 8186593,
@@ -52,7 +54,10 @@
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8186593",
     "cat_id": "comp_prin_v2",
-    "target_location_status": "VERIFIED_BENGALURU_URBAN"
+    "target_location_status": "AMBIGUOUS",
+    "synchronization_status": "PDF_BID_MISMATCH",
+    "pdf_verification_status": "PDF_BID_MISMATCH",
+    "verification_reason": "PDF_BID_MISMATCH: Linked document ID contains a different bid ID than the record. Quarantined in Review Queue."
   },
   {
     "gem_bid_id": 8095785,
@@ -71,7 +76,10 @@
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8095785",
     "cat_id": "toner_cart",
-    "target_location_status": "VERIFIED_BENGALURU_URBAN"
+    "target_location_status": "AMBIGUOUS",
+    "synchronization_status": "PDF_BID_MISMATCH",
+    "pdf_verification_status": "PDF_BID_MISMATCH",
+    "verification_reason": "PDF_BID_MISMATCH: Linked document ID contains a different bid ID than the record. Quarantined in Review Queue."
   },
   {
     "gem_bid_id": 8192651,
@@ -90,7 +98,10 @@
     "consignee_city": "Bengaluru",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8192651",
     "cat_id": "mfp_prin",
-    "target_location_status": "VERIFIED_BENGALURU_URBAN"
+    "target_location_status": "UNKNOWN",
+    "synchronization_status": "SOURCE_UNAVAILABLE",
+    "pdf_verification_status": "PDF_UNAVAILABLE",
+    "verification_reason": "SOURCE_UNAVAILABLE: Document currently unavailable from GeM source. Quarantined in Review Queue."
   },
   {
     "gem_bid_id": 8192076,
@@ -109,7 +120,10 @@
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8192076",
     "cat_id": "cart_refill",
-    "target_location_status": "VERIFIED_BENGALURU_URBAN"
+    "target_location_status": "UNKNOWN",
+    "synchronization_status": "SOURCE_UNAVAILABLE",
+    "pdf_verification_status": "PDF_UNAVAILABLE",
+    "verification_reason": "SOURCE_UNAVAILABLE: Document currently unavailable from GeM source. Quarantined in Review Queue."
   },
   {
     "gem_bid_id": 8186128,
@@ -128,7 +142,10 @@
     "consignee_city": "Bengaluru",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8186128",
     "cat_id": "ink_pack",
-    "target_location_status": "VERIFIED_BENGALURU_URBAN"
+    "target_location_status": "UNKNOWN",
+    "synchronization_status": "SOURCE_UNAVAILABLE",
+    "pdf_verification_status": "PDF_UNAVAILABLE",
+    "verification_reason": "SOURCE_UNAVAILABLE: Document currently unavailable from GeM source. Quarantined in Review Queue."
   },
   {
     "gem_bid_id": 8196969,
@@ -147,7 +164,10 @@
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8196969",
     "cat_id": "toner_cart",
-    "target_location_status": "VERIFIED_BENGALURU_URBAN"
+    "target_location_status": "AMBIGUOUS",
+    "synchronization_status": "PDF_BID_MISMATCH",
+    "pdf_verification_status": "PDF_BID_MISMATCH",
+    "verification_reason": "PDF_BID_MISMATCH: Linked document ID contains a different bid ID than the record. Quarantined in Review Queue."
   },
   {
     "gem_bid_id": 8211130,
@@ -166,7 +186,10 @@
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8211130",
     "cat_id": "drum_cart",
-    "target_location_status": "VERIFIED_BENGALURU_URBAN"
+    "target_location_status": "AMBIGUOUS",
+    "synchronization_status": "PDF_BID_MISMATCH",
+    "pdf_verification_status": "PDF_BID_MISMATCH",
+    "verification_reason": "PDF_BID_MISMATCH: Linked document ID contains a different bid ID than the record. Quarantined in Review Queue."
   },
   {
     "gem_bid_id": 8117647,
@@ -185,7 +208,10 @@
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8117647",
     "cat_id": "mfp_prin",
-    "target_location_status": "VERIFIED_BENGALURU_URBAN"
+    "target_location_status": "AMBIGUOUS",
+    "synchronization_status": "PDF_BID_MISMATCH",
+    "pdf_verification_status": "PDF_BID_MISMATCH",
+    "verification_reason": "PDF_BID_MISMATCH: Linked document ID contains a different bid ID than the record. Quarantined in Review Queue."
   },
   {
     "gem_bid_id": 8210645,
@@ -204,7 +230,10 @@
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8210645",
     "cat_id": "mfp_prin",
-    "target_location_status": "VERIFIED_BENGALURU_URBAN"
+    "target_location_status": "AMBIGUOUS",
+    "synchronization_status": "PDF_BID_MISMATCH",
+    "pdf_verification_status": "PDF_BID_MISMATCH",
+    "verification_reason": "PDF_BID_MISMATCH: Linked document ID contains a different bid ID than the record. Quarantined in Review Queue."
   },
   {
     "gem_bid_id": 8194494,
@@ -223,7 +252,10 @@
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8194494",
     "cat_id": "toner_cart",
-    "target_location_status": "VERIFIED_BENGALURU_URBAN"
+    "target_location_status": "UNKNOWN",
+    "synchronization_status": "SOURCE_UNAVAILABLE",
+    "pdf_verification_status": "PDF_UNAVAILABLE",
+    "verification_reason": "SOURCE_UNAVAILABLE: Document currently unavailable from GeM source. Quarantined in Review Queue."
   },
   {
     "gem_bid_id": 8211464,
@@ -242,7 +274,10 @@
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8211464",
     "cat_id": "toner_cart",
-    "target_location_status": "VERIFIED_BENGALURU_URBAN"
+    "target_location_status": "UNKNOWN",
+    "synchronization_status": "SOURCE_UNAVAILABLE",
+    "pdf_verification_status": "PDF_UNAVAILABLE",
+    "verification_reason": "SOURCE_UNAVAILABLE: Document currently unavailable from GeM source. Quarantined in Review Queue."
   },
   {
     "gem_bid_id": 8194412,
@@ -261,7 +296,10 @@
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8194412",
     "cat_id": "comp_prin_v2",
-    "target_location_status": "VERIFIED_BENGALURU_URBAN"
+    "target_location_status": "AMBIGUOUS",
+    "synchronization_status": "PDF_BID_MISMATCH",
+    "pdf_verification_status": "PDF_BID_MISMATCH",
+    "verification_reason": "PDF_BID_MISMATCH: Linked document ID contains a different bid ID than the record. Quarantined in Review Queue."
   },
   {
     "gem_bid_id": 8192847,
@@ -280,7 +318,10 @@
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8192847",
     "cat_id": "cart_refill",
-    "target_location_status": "VERIFIED_BENGALURU_URBAN"
+    "target_location_status": "UNKNOWN",
+    "synchronization_status": "SOURCE_UNAVAILABLE",
+    "pdf_verification_status": "PDF_UNAVAILABLE",
+    "verification_reason": "SOURCE_UNAVAILABLE: Document currently unavailable from GeM source. Quarantined in Review Queue."
   },
   {
     "gem_bid_id": 8203999,
@@ -299,7 +340,10 @@
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8203999",
     "cat_id": "toner_cart",
-    "target_location_status": "VERIFIED_BENGALURU_URBAN"
+    "target_location_status": "UNKNOWN",
+    "synchronization_status": "SOURCE_UNAVAILABLE",
+    "pdf_verification_status": "PDF_UNAVAILABLE",
+    "verification_reason": "SOURCE_UNAVAILABLE: Document currently unavailable from GeM source. Quarantined in Review Queue."
   },
   {
     "gem_bid_id": 8219901,
@@ -328,10 +372,12 @@
     "pdf_page_number": 7,
     "pdf_extraction_method": "PDF_TEXT",
     "pdf_confidence_score": 0.95,
-    "pdf_verification_status": "VERIFIED",
+    "pdf_verification_status": "PDF_BID_MISMATCH",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8219901",
     "cat_id": "scanner_v3",
-    "target_location_status": "VERIFIED_BENGALURU_URBAN"
+    "target_location_status": "AMBIGUOUS",
+    "synchronization_status": "PDF_BID_MISMATCH",
+    "verification_reason": "PDF_BID_MISMATCH: Linked document ID contains a different bid ID than the record. Quarantined in Review Queue."
   },
   {
     "gem_bid_id": 8219902,
@@ -360,10 +406,12 @@
     "pdf_page_number": 11,
     "pdf_extraction_method": "PDF_TEXT",
     "pdf_confidence_score": 0.95,
-    "pdf_verification_status": "VERIFIED",
+    "pdf_verification_status": "PDF_BID_MISMATCH",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8219902",
     "cat_id": "high_end_desktop",
-    "target_location_status": "VERIFIED_BENGALURU_URBAN"
+    "target_location_status": "AMBIGUOUS",
+    "synchronization_status": "PDF_BID_MISMATCH",
+    "verification_reason": "PDF_BID_MISMATCH: Linked document ID contains a different bid ID than the record. Quarantined in Review Queue."
   },
   {
     "gem_bid_id": 8219903,
@@ -392,9 +440,17 @@
     "pdf_page_number": 9,
     "pdf_extraction_method": "PDF_TEXT",
     "pdf_confidence_score": 0.95,
-    "pdf_verification_status": "VERIFIED",
+    "pdf_verification_status": "PDF_BID_MISMATCH",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8219903",
     "cat_id": "high_end_laptop",
-    "target_location_status": "VERIFIED_BENGALURU_URBAN"
+    "target_location_status": "AMBIGUOUS",
+    "synchronization_status": "PDF_BID_MISMATCH",
+    "pdf_bid_number": "GEM/2025/B/6568333",
+    "extracted_delivery_address": "Sodha Naranbhai Shanabhai, 387001, GUJARAT STATE ROAD TRANSPORT CORPORATION, DIVISION OFFICE, KAPADWANJ ROAD, NEAR SRP CAMP, NADIAD, GUJARAT",
+    "extracted_city": "Nadiad",
+    "extracted_district": "Kheda",
+    "extracted_state": "GUJARAT",
+    "extracted_pincode": "387001",
+    "verification_reason": "PDF_BID_MISMATCH: Document contains GEM/2025/B/6568333 (Year: 2025, Nadiad, Gujarat, PIN: 387001), which does not match registered bid GEM/2026/B/8219903. Quarantined in Review Queue."
   }
 ]

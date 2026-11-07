@@ -24,6 +24,17 @@ from app.services.location_normalizer import (
 from app.services.category_service import match_category, get_all_target_categories, CATEGORIES_BY_ID
 from app.services.pdf_location_extractor import extract_location_from_pdf
 
+VERIFIED_SYNC_STATUSES = ["VERIFIED", "SYNCHRONIZED"]
+MISMATCH_SYNC_STATUSES = [
+    "PDF_BID_MISMATCH",
+    "LOCATION_MISMATCH",
+    "DATE_MISMATCH",
+    "DOCUMENT_VERSION_MISMATCH",
+    "DATA_MISMATCH",
+    "OCR_UNCERTAIN",
+    "SOURCE_UNAVAILABLE",
+]
+
 router = APIRouter(prefix="/bids", tags=["Bids"])
 
 
@@ -125,12 +136,13 @@ def _enrich_bid(b: Bid, now_utc: Optional[datetime] = None) -> BidOut:
         extracted_district=b.extracted_district or b.pdf_delivery_district,
         extracted_state=b.extracted_state or b.pdf_delivery_state,
         extracted_pincode=b.extracted_pincode or b.pdf_delivery_pincode,
-        pdf_bid_number=b.pdf_bid_number or b.bid_number,
-        pdf_details_page_number=b.pdf_details_page_number or 1,
+        pdf_bid_number=b.pdf_bid_number,
+        pdf_details_page_number=b.pdf_details_page_number,
         extraction_timestamp=b.extraction_timestamp or b.pdf_processed_at,
         verification_timestamp=b.verification_timestamp,
         data_confidence=b.data_confidence or b.pdf_confidence_score,
-        synchronization_status=b.synchronization_status or "SYNCHRONIZED",
+        synchronization_status=b.synchronization_status or "PENDING",
+        verification_reason=b.verification_reason,
         bid_url=b.bid_url,
         cat_id=b.cat_id,
         first_seen_at=b.first_seen_at or now,
@@ -289,58 +301,59 @@ def list_bids(
     # 4. Target Location Scope Filter
     if target_status:
         q = q.filter(Bid.target_location_status == target_status.strip().upper())
-    elif scope and scope.lower().strip() in ("review", "partially_verified", "ambiguous", "unverified"):
+    elif (scope and scope.lower().strip() in ("review", "partially_verified", "ambiguous", "unverified")) or (
+        location_target and location_target.lower().strip() in ("review", "partially_verified", "ambiguous", "unverified")
+    ):
         q = q.filter(
             or_(
                 Bid.target_location_status.in_([STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS, STATUS_UNKNOWN]),
-                Bid.synchronization_status == "DATA_MISMATCH"
+                Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES),
+                Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES),
             )
         )
-    elif scope and scope.lower().strip() in ("outside", "outside_target"):
+    elif (scope and scope.lower().strip() in ("outside", "outside_target")) or (
+        location_target and location_target.lower().strip() in ("outside", "outside_target")
+    ):
         q = q.filter(Bid.target_location_status == STATUS_OUTSIDE_TARGET)
-    elif location_target:
+    elif location_target and location_target.lower().strip() not in ("all", "any"):
         loc_tgt = location_target.lower().strip()
-        if loc_tgt in ("all_bengaluru", "all_bengaluru_targets", "bengaluru_all"):
-            q = q.filter(
-                Bid.target_location_status.in_([STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY]),
-                or_(Bid.synchronization_status == None, Bid.synchronization_status != "DATA_MISMATCH")
-            )
-        elif loc_tgt in ("bengaluru_city", "bangalore_city", "city"):
+        if loc_tgt in ("bengaluru_city", "bangalore_city", "city"):
             q = q.filter(
                 Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY,
-                or_(Bid.synchronization_status == None, Bid.synchronization_status != "DATA_MISMATCH")
+                or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
+                or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
             )
         elif loc_tgt in ("bengaluru_urban", "bangalore_urban", "urban", "district"):
             q = q.filter(
                 Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN,
-                or_(Bid.synchronization_status == None, Bid.synchronization_status != "DATA_MISMATCH")
+                or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
+                or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
             )
-        elif loc_tgt in ("review", "partially_verified", "ambiguous", "unverified"):
+        else:  # all_bengaluru, all_bengaluru_targets
             q = q.filter(
-                or_(
-                    Bid.target_location_status.in_([STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS, STATUS_UNKNOWN]),
-                    Bid.synchronization_status == "DATA_MISMATCH"
-                )
+                Bid.target_location_status.in_([STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY]),
+                or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
+                or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
             )
-        elif loc_tgt in ("outside", "outside_target"):
-            q = q.filter(Bid.target_location_status == STATUS_OUTSIDE_TARGET)
-        # 'all' applies no target location filtering
-    elif scope:
+    elif scope and scope.lower().strip() not in ("all", "any"):
         scope_clean = scope.lower().strip()
         if scope_clean in ("bengaluru_urban", "bangalore_urban"):
             q = q.filter(
                 Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN,
-                or_(Bid.synchronization_status == None, Bid.synchronization_status != "DATA_MISMATCH")
+                or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
+                or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
             )
         elif scope_clean in ("bengaluru_city", "bangalore_city"):
             q = q.filter(
                 Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY,
-                or_(Bid.synchronization_status == None, Bid.synchronization_status != "DATA_MISMATCH")
+                or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
+                or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
             )
         elif scope_clean in ("all_bengaluru", "bengaluru", "verified", "target", "matching"):
             q = q.filter(
                 Bid.target_location_status.in_([STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY]),
-                or_(Bid.synchronization_status == None, Bid.synchronization_status != "DATA_MISMATCH")
+                or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
+                or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
             )
 
     # 5. Keyword / Legacy Category / Dept Filters
@@ -393,20 +406,31 @@ def get_bids_summary_stats(db: Session = Depends(get_db)):
     total = db.query(Bid).count()
     active = db.query(Bid).filter(or_(Bid.end_date == None, Bid.end_date > now)).count()
     expired = db.query(Bid).filter(and_(Bid.end_date != None, Bid.end_date <= now)).count()
+
+    verified_criteria = [
+        or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
+        or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
+        or_(Bid.end_date == None, Bid.end_date > now),
+    ]
+
     bengaluru_urban_verified = db.query(Bid).filter(
         Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN,
-        or_(Bid.end_date == None, Bid.end_date > now)
+        *verified_criteria
     ).count()
     bengaluru_city_verified = db.query(Bid).filter(
         Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY,
-        or_(Bid.end_date == None, Bid.end_date > now)
+        *verified_criteria
     ).count()
     bengaluru_total_verified = db.query(Bid).filter(
         Bid.target_location_status.in_([STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY]),
-        or_(Bid.end_date == None, Bid.end_date > now)
+        *verified_criteria
     ).count()
     review_count = db.query(Bid).filter(
-        Bid.target_location_status.in_([STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS, STATUS_UNKNOWN]),
+        or_(
+            Bid.target_location_status.in_([STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS, STATUS_UNKNOWN]),
+            Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES),
+            Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES),
+        ),
         or_(Bid.end_date == None, Bid.end_date > now)
     ).count()
     outside_target_count = db.query(Bid).filter(

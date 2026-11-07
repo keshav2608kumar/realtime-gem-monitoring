@@ -975,13 +975,32 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           ? '<span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">LIVE</span>'
           : '<span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/20">IMPORTED</span>';
 
-        const statusBadge = isExp
-          ? '<span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-slate-800 text-slate-400 border border-slate-700">EXPIRED</span>'
-          : '<span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-red-600/20 text-red-400 border border-red-500/30">MATCH</span>';
+        const isMismatch = [
+          'PDF_BID_MISMATCH', 'LOCATION_MISMATCH', 'DATE_MISMATCH',
+          'DOCUMENT_VERSION_MISMATCH', 'DATA_MISMATCH', 'OCR_UNCERTAIN'
+        ].includes(b.synchronization_status) || [
+          'PDF_BID_MISMATCH', 'LOCATION_MISMATCH', 'DATE_MISMATCH',
+          'DOCUMENT_VERSION_MISMATCH', 'DATA_MISMATCH', 'OCR_UNCERTAIN'
+        ].includes(b.pdf_verification_status);
+
+        let statusBadge = '';
+        if (isMismatch) {
+          statusBadge = '<span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-red-600/30 text-red-300 border border-red-500/40">QUARANTINED</span>';
+        } else if (isExp) {
+          statusBadge = '<span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-slate-800 text-slate-400 border border-slate-700">EXPIRED</span>';
+        } else {
+          statusBadge = '<span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-600/20 text-emerald-400 border border-emerald-500/30">MATCH</span>';
+        }
 
         // Delivery Location Representation
         let locBadge = '';
-        if (b.target_location_status === 'VERIFIED_BENGALURU_URBAN') {
+        if (b.synchronization_status === 'PDF_BID_MISMATCH' || b.pdf_verification_status === 'PDF_BID_MISMATCH') {
+          locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-red-500/20 text-red-300 border border-red-500/40 w-max mb-1"><i class="fa-solid fa-triangle-exclamation text-[9px]"></i> PDF BID MISMATCH</span>';
+        } else if (b.synchronization_status === 'LOCATION_MISMATCH' || b.pdf_verification_status === 'LOCATION_MISMATCH') {
+          locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-red-500/20 text-red-300 border border-red-500/40 w-max mb-1"><i class="fa-solid fa-triangle-exclamation text-[9px]"></i> LOCATION MISMATCH</span>';
+        } else if (b.synchronization_status === 'DATE_MISMATCH' || b.pdf_verification_status === 'DATE_MISMATCH') {
+          locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-red-500/20 text-red-300 border border-red-500/40 w-max mb-1"><i class="fa-solid fa-triangle-exclamation text-[9px]"></i> DATE MISMATCH</span>';
+        } else if (b.target_location_status === 'VERIFIED_BENGALURU_URBAN') {
           locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 w-max mb-1"><i class="fa-solid fa-circle-check text-[9px]"></i> BENGALURU URBAN</span>';
         } else if (b.target_location_status === 'VERIFIED_BENGALURU_CITY') {
           locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-500/20 text-blue-300 border border-blue-500/30 w-max mb-1"><i class="fa-solid fa-circle-check text-[9px]"></i> BENGALURU CITY</span>';
@@ -1133,30 +1152,47 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       const syncStatus = bid.synchronization_status || 'PENDING';
       const status = bid.pdf_verification_status || 'UNKNOWN';
 
-      if (syncStatus === 'DATA_MISMATCH') {
-        badge.textContent = 'DATA_MISMATCH';
+      const isIntegrityMismatch = [
+        'PDF_BID_MISMATCH', 'LOCATION_MISMATCH', 'DATE_MISMATCH',
+        'DOCUMENT_VERSION_MISMATCH', 'DATA_MISMATCH'
+      ].includes(syncStatus) || [
+        'PDF_BID_MISMATCH', 'LOCATION_MISMATCH', 'DATE_MISMATCH',
+        'DOCUMENT_VERSION_MISMATCH', 'DATA_MISMATCH'
+      ].includes(status);
+
+      if (isIntegrityMismatch) {
+        badge.textContent = syncStatus !== 'VERIFIED' ? syncStatus : status;
         badge.className = "px-2.5 py-0.5 rounded text-[10px] font-black uppercase bg-red-500/20 text-red-300 border border-red-500/40";
-      } else if (status === 'VERIFIED') {
+      } else if (status === 'VERIFIED' && (syncStatus === 'VERIFIED' || syncStatus === 'SYNCHRONIZED')) {
         badge.textContent = 'VERIFIED';
         badge.className = "px-2.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
       } else if (status === 'PARTIALLY_VERIFIED') {
         badge.textContent = 'PARTIALLY_VERIFIED';
         badge.className = "px-2.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30";
+      } else if (status === 'SOURCE_UNAVAILABLE') {
+        badge.textContent = 'SOURCE_UNAVAILABLE';
+        badge.className = "px-2.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700";
       } else {
         badge.textContent = status;
         badge.className = "px-2.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700";
       }
 
       let mismatchHtml = '';
-      if (syncStatus === 'DATA_MISMATCH') {
+      if (isIntegrityMismatch) {
+        const displayReason = bid.verification_reason || `Document Bid ID (${bid.pdf_bid_number || 'Unknown'}) does not match registered Bid ID (${bid.bid_number}). Quarantined in Review Queue.`;
         mismatchHtml = `
-          <div class="p-3 rounded-xl bg-red-950/40 border border-red-500/40 text-red-200 text-xs space-y-1">
-            <div class="font-bold flex items-center gap-1.5 text-red-300">
-              <i class="fa-solid fa-triangle-exclamation text-red-400"></i> DOCUMENT DATA MISMATCH
+          <div class="p-3.5 rounded-xl bg-red-950/60 border border-red-500/50 text-red-200 text-xs space-y-2">
+            <div class="font-bold flex items-center justify-between text-red-300">
+              <span class="flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-red-400"></i> DOCUMENT INTEGRITY MISMATCH DETECTED</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-red-900/60 text-red-200 border border-red-500/30 font-bold uppercase">${escapeHtml(syncStatus !== 'VERIFIED' ? syncStatus : status)}</span>
             </div>
-            <p class="text-[11px] text-red-200">
-              Document Bid Number (${escapeHtml(bid.pdf_bid_number || 'Unknown')}) does not match record (${escapeHtml(bid.bid_number)}). Quarantined in Review Queue.
+            <p class="text-[12px] text-red-100 font-medium">
+              ${escapeHtml(displayReason)}
             </p>
+            <div class="grid grid-cols-2 gap-2 text-[10px] font-mono bg-slate-950/60 p-2 rounded border border-red-500/20">
+              <div>Registered Bid ID: <span class="text-slate-300 font-bold">${escapeHtml(bid.bid_number)}</span></div>
+              <div>PDF Document Bid ID: <span class="text-red-300 font-bold">${escapeHtml(bid.pdf_bid_number || 'None / Not matching')}</span></div>
+            </div>
           </div>
         `;
       }

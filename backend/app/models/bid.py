@@ -89,7 +89,8 @@ class Bid(Base):
     extraction_timestamp = Column(DateTime(timezone=True), nullable=True)
     verification_timestamp = Column(DateTime(timezone=True), nullable=True)
     data_confidence = Column(Float, nullable=True)
-    synchronization_status = Column(String(50), default="PENDING", index=True)  # SYNCHRONIZED, DATA_MISMATCH, FAILED, PENDING, PDF_UNAVAILABLE
+    synchronization_status = Column(String(50), default="PENDING", index=True)  # VERIFIED, PDF_BID_MISMATCH, LOCATION_MISMATCH, DATE_MISMATCH, DOCUMENT_VERSION_MISMATCH, OCR_UNCERTAIN, SOURCE_UNAVAILABLE, UNKNOWN
+    verification_reason = Column(Text, nullable=True)
 
     raw_location_text = Column(Text, nullable=True)
     location_verification_status = Column(String(50), default="UNKNOWN")  # VERIFIED, NORMALIZED, AMBIGUOUS, UNKNOWN
