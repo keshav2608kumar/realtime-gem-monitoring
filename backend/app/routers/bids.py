@@ -16,7 +16,11 @@ from app.services.datetime_service import (
 from app.services.bid_status_service import (
     calculate_bid_status, is_active_status, STATUS_ACTIVE, STATUS_EXPIRED, STATUS_CLOSING_SOON
 )
-from app.services.location_normalizer import normalize_location
+from app.services.location_normalizer import (
+    normalize_location, resolve_effective_bid_delivery_location,
+    STATUS_VERIFIED_BENGALURU_URBAN, STATUS_PARTIALLY_VERIFIED,
+    STATUS_AMBIGUOUS, STATUS_OUTSIDE_TARGET, STATUS_UNKNOWN
+)
 from app.services.category_service import match_category, get_all_target_categories, CATEGORIES_BY_ID
 from app.services.pdf_location_extractor import extract_location_from_pdf
 
@@ -37,6 +41,11 @@ def _enrich_bid(b: Bid, now_utc: Optional[datetime] = None) -> BidOut:
         city_hint=b.consignee_city or b.buyer_city,
         state_hint=b.consignee_state or b.buyer_state,
     )
+
+    # Resolve target location status if missing
+    t_status = getattr(b, "target_location_status", None)
+    if not t_status or t_status == "UNKNOWN":
+        t_status, _, _, _, _ = resolve_effective_bid_delivery_location(b)
 
     # Resolve category key if missing
     cat_key = b.category_key
@@ -91,6 +100,7 @@ def _enrich_bid(b: Bid, now_utc: Optional[datetime] = None) -> BidOut:
         pdf_doc_hash=b.pdf_doc_hash,
         raw_location_text=b.raw_location_text or loc.raw_text,
         location_verification_status=b.location_verification_status or loc.confidence,
+        target_location_status=t_status or "UNKNOWN",
         data_source_classification=b.data_source_classification or "LIVE_VERIFIED",
         bid_url=b.bid_url,
         cat_id=b.cat_id,
@@ -131,6 +141,14 @@ def list_bids(
     categories: Optional[List[str]] = Query(
         default=None,
         description="One or more canonical product category IDs (e.g. TONER_INK_PRINTER_CONSUMABLES, SCANNER_V3)"
+    ),
+    scope: Optional[str] = Query(
+        default=None,
+        description="Target location scope: 'bengaluru_urban' (verified matching feed), 'review', 'outside', 'all'"
+    ),
+    target_status: Optional[str] = Query(
+        default=None,
+        description="Filter by exact target_location_status (e.g. VERIFIED_BENGALURU_URBAN, PARTIALLY_VERIFIED, AMBIGUOUS, OUTSIDE_TARGET, UNKNOWN)"
     ),
     dept: Optional[str] = None,
     source_type: Optional[str] = None,
@@ -231,7 +249,19 @@ def list_bids(
                     cat_filters.append(Bid.category_name.ilike(f"%{c_def.display_name}%"))
             q = q.filter(or_(*cat_filters))
 
-    # 4. Keyword / Legacy Category / Dept Filters
+    # 4. Target Location Scope Filter
+    if target_status:
+        q = q.filter(Bid.target_location_status == target_status.strip().upper())
+    elif scope:
+        scope_clean = scope.lower().strip()
+        if scope_clean in ("bengaluru_urban", "bangalore_urban", "verified", "target", "matching"):
+            q = q.filter(Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN)
+        elif scope_clean in ("review", "partially_verified", "ambiguous", "unverified"):
+            q = q.filter(Bid.target_location_status.in_([STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS, STATUS_UNKNOWN]))
+        elif scope_clean in ("outside", "outside_target"):
+            q = q.filter(Bid.target_location_status == STATUS_OUTSIDE_TARGET)
+
+    # 5. Keyword / Legacy Category / Dept Filters
     if keyword:
         kw = f"%{keyword}%"
         q = q.filter(
@@ -281,10 +311,25 @@ def get_bids_summary_stats(db: Session = Depends(get_db)):
     total = db.query(Bid).count()
     active = db.query(Bid).filter(or_(Bid.end_date == None, Bid.end_date > now)).count()
     expired = db.query(Bid).filter(and_(Bid.end_date != None, Bid.end_date <= now)).count()
+    bengaluru_urban_verified = db.query(Bid).filter(
+        Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN,
+        or_(Bid.end_date == None, Bid.end_date > now)
+    ).count()
+    review_count = db.query(Bid).filter(
+        Bid.target_location_status.in_([STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS, STATUS_UNKNOWN]),
+        or_(Bid.end_date == None, Bid.end_date > now)
+    ).count()
+    outside_target_count = db.query(Bid).filter(
+        Bid.target_location_status == STATUS_OUTSIDE_TARGET,
+        or_(Bid.end_date == None, Bid.end_date > now)
+    ).count()
     return {
         "total_bids": total,
         "active_bids": active,
         "expired_bids": expired,
+        "bengaluru_urban_verified": bengaluru_urban_verified,
+        "review_count": review_count,
+        "outside_target_count": outside_target_count,
         "timestamp_utc": now.isoformat(),
     }
 
@@ -316,6 +361,9 @@ def batch_sync_bids(bids: List[BidCreate], db: Session = Depends(get_db)):
             state_hint=bid_data.consignee_state,
         )
 
+        # Classify target delivery location status
+        loc_st, _, _, _, _ = resolve_effective_bid_delivery_location(bid_data)
+
         # Classify product category
         ckey, _, cstatus = match_category(bid_data.category_name, bid_data.cat_id)
 
@@ -345,6 +393,7 @@ def batch_sync_bids(bids: List[BidCreate], db: Session = Depends(get_db)):
             if loc.district:
                 existing.consignee_district = loc.district
             existing.location_verification_status = loc.confidence
+            existing.target_location_status = loc_st
             if bid_data.bid_url:
                 existing.bid_url = bid_data.bid_url
             if bid_data.bid_status:
@@ -356,6 +405,7 @@ def batch_sync_bids(bids: List[BidCreate], db: Session = Depends(get_db)):
             dump["consignee_state"] = loc.state
             dump["consignee_district"] = loc.district
             dump["location_verification_status"] = loc.confidence
+            dump["target_location_status"] = loc_st
             dump["category_key"] = ckey
             dump["category_mapping_status"] = cstatus
             db_bid = Bid(**dump)
@@ -449,6 +499,10 @@ def trigger_pdf_extraction(bid_id: int, db: Session = Depends(get_db)):
     b.pdf_verification_status = res.verification_status
     b.pdf_processed_at = datetime.now(timezone.utc)
     b.pdf_doc_hash = res.doc_hash
+
+    # Re-evaluate target location status with newly extracted PDF delivery details
+    new_status, _, _, _, _ = resolve_effective_bid_delivery_location(b)
+    b.target_location_status = new_status
 
     db.commit()
     db.refresh(b)

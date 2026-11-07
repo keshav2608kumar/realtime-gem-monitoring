@@ -72,6 +72,7 @@ def migrate_db():
                     ("pdf_verification_status", "VARCHAR(50)"),
                     ("pdf_processed_at", "TIMESTAMP"),
                     ("pdf_doc_hash", "VARCHAR(64)"),
+                    ("target_location_status", "VARCHAR(50)"),
                 ]
                 for col_name, col_type in bid_cols_to_add:
                     if col_name not in existing_bid_cols:
@@ -117,7 +118,43 @@ def migrate_db():
         except Exception as pe:
             logger.debug(f"Notice during profiles table migration check: {pe}")
 
-        # Backfill category_key on bids if missing
+        # Backfill target_location_status on bids if missing or UNKNOWN
+        try:
+            from app.services.location_normalizer import resolve_effective_bid_delivery_location
+            bids_to_loc_backfill = conn.execute(
+                text("""
+                    SELECT id, pdf_delivery_address, pdf_delivery_city, pdf_delivery_district,
+                           pdf_delivery_state, pdf_delivery_pincode, delivery_address, delivery_city,
+                           delivery_district, delivery_state, consignee_city, consignee_district,
+                           consignee_state, raw_location_text, dept_name
+                    FROM bids WHERE target_location_status IS NULL OR target_location_status = 'UNKNOWN'
+                """)
+            ).fetchall()
+            for b_row in bids_to_loc_backfill:
+                b_dict = {
+                    "pdf_delivery_address": b_row[1],
+                    "pdf_delivery_city": b_row[2],
+                    "pdf_delivery_district": b_row[3],
+                    "pdf_delivery_state": b_row[4],
+                    "pdf_delivery_pincode": b_row[5],
+                    "delivery_address": b_row[6],
+                    "delivery_city": b_row[7],
+                    "delivery_district": b_row[8],
+                    "delivery_state": b_row[9],
+                    "consignee_city": b_row[10],
+                    "consignee_district": b_row[11],
+                    "consignee_state": b_row[12],
+                    "raw_location_text": b_row[13],
+                    "dept_name": b_row[14],
+                }
+                st, conf, c, d, s = resolve_effective_bid_delivery_location(b_dict)
+                conn.execute(
+                    text("UPDATE bids SET target_location_status = :tstatus WHERE id = :bid_id"),
+                    {"tstatus": st, "bid_id": b_row[0]}
+                )
+            conn.commit()
+        except Exception as lbe:
+            logger.debug(f"Notice during target_location_status backfill: {lbe}")
         try:
             from app.services.category_service import match_category
             bids_to_backfill = conn.execute(

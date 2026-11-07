@@ -8,7 +8,11 @@ import logging
 import re
 from typing import List, Optional
 from app.schemas import BidCreate, ProfileOut
-from app.services.location_normalizer import resolve_state, clean_text, CITY_DISTRICT_TO_STATE
+from app.services.location_normalizer import (
+    resolve_state, clean_text, CITY_DISTRICT_TO_STATE,
+    resolve_effective_bid_delivery_location, STATUS_VERIFIED_BENGALURU_URBAN,
+    STATUS_OUTSIDE_TARGET, STATUS_PARTIALLY_VERIFIED
+)
 from app.services.category_service import match_category
 
 logger = logging.getLogger(__name__)
@@ -29,19 +33,26 @@ def match_bid_to_profile(bid: BidCreate, profile: ProfileOut) -> MatchResult:
     Returns MatchResult indicating whether bid satisfies profile criteria.
 
     Strict Matching Rules:
-    1. State filter: If profile.state is set, bid.consignee_state must match canonical state.
-       A missing bid state will NOT match.
-    2. City filter: If profile.cities is set, bid.consignee_city must match at least one profile city.
-       A missing bid city will NOT match.
-    3. Keyword match: Category name must contain at least one configured keyword with word boundaries.
-    4. Ministry filter: If configured, ministry_name must match allowed ministries.
+    1. Priority Delivery Location:
+       Strictly prioritizes PDF delivery -> Structured delivery -> Consignee delivery.
+       Never assumes buyer office is delivery location.
+       For Bengaluru Urban profiles, bid must have STATUS_VERIFIED_BENGALURU_URBAN.
+    2. State filter: If profile.state is set, bid delivery/consignee state must match canonical state.
+    3. City filter: If profile.cities is set, bid delivery/consignee city must match at least one profile city.
+    4. Target Category Filter: If profile.categories is set, canonical category_key must match.
+    5. Keyword match: Category name must contain at least one configured keyword with word boundaries.
+    6. Ministry filter: If configured, ministry_name must match allowed ministries.
     """
+    # ─── 0. Priority Delivery Location Resolution ───────────────────────────────
+    eff_status, eff_conf, eff_city, eff_dist, eff_state = resolve_effective_bid_delivery_location(bid)
+
     # ─── 1. State Filter ────────────────────────────────────────────────────────
     if profile.state:
         prof_state_clean = clean_text(profile.state)
         canonical_prof_state = resolve_state(prof_state_clean) or prof_state_clean.upper()
 
-        bid_state_clean = clean_text(bid.consignee_state or bid.buyer_state)
+        bid_state_raw = eff_state or bid.consignee_state or (bid.buyer_state if not eff_city else None)
+        bid_state_clean = clean_text(bid_state_raw)
         if not bid_state_clean:
             return MatchResult(False, [], "Bid state missing; rejected by state filter")
 
@@ -53,24 +64,47 @@ def match_bid_to_profile(bid: BidCreate, profile: ProfileOut) -> MatchResult:
                 f"State mismatch: Profile requires '{canonical_prof_state}', bid is '{canonical_bid_state}'"
             )
 
-    # ─── 2. City Filter ─────────────────────────────────────────────────────────
+    # ─── 2. City & Bengaluru Urban Filter ───────────────────────────────────────
+    # Detect if profile specifically monitors Bengaluru / Bangalore
+    prof_targets_bengaluru = False
     if profile.cities and len(profile.cities) > 0:
-        bid_city_clean = clean_text(bid.consignee_city or bid.buyer_city).lower()
+        for c in profile.cities:
+            if re.search(r"\b(?:bengaluru|bangalore)\b", (c or "").lower()):
+                prof_targets_bengaluru = True
+                break
+
+    if prof_targets_bengaluru:
+        if eff_status != STATUS_VERIFIED_BENGALURU_URBAN:
+            return MatchResult(
+                False, [],
+                f"Location rejected: Delivery status is '{eff_status}' (Requires VERIFIED_BENGALURU_URBAN)"
+            )
+    if profile.cities and len(profile.cities) > 0:
+        bid_city_raw = eff_city or bid.consignee_city or (bid.buyer_city if not eff_state else None)
+        bid_city_clean = clean_text(bid_city_raw).lower()
         if not bid_city_clean:
             return MatchResult(False, [], "Bid city missing; rejected by city filter")
 
         # Canonical city lookup if available
         canonical_bid_city = bid_city_clean
-        canonical_bid_dist = None
+        canonical_bid_dist = eff_dist.lower() if eff_dist else None
         if bid_city_clean in CITY_DISTRICT_TO_STATE:
             canonical_bid_city = CITY_DISTRICT_TO_STATE[bid_city_clean][0].lower()
-            canonical_bid_dist = CITY_DISTRICT_TO_STATE[bid_city_clean][1].lower()
+            canonical_bid_dist = canonical_bid_dist or CITY_DISTRICT_TO_STATE[bid_city_clean][1].lower()
 
         city_matched = False
         for c in profile.cities:
             c_clean = clean_text(c).lower()
             if not c_clean:
                 continue
+
+            # Special case for Bengaluru Urban verified match
+            if (
+                re.search(r"\b(?:bengaluru|bangalore)\b", c_clean)
+                and eff_status == STATUS_VERIFIED_BENGALURU_URBAN
+            ):
+                city_matched = True
+                break
 
             canonical_c = c_clean
             canonical_c_dist = None

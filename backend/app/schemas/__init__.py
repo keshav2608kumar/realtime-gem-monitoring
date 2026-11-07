@@ -57,6 +57,7 @@ class BidBase(BaseModel):
 
     raw_location_text: Optional[str] = None
     location_verification_status: Optional[str] = "UNKNOWN"
+    target_location_status: Optional[str] = "UNKNOWN"
     data_source_classification: Optional[str] = "LIVE_VERIFIED"
 
     bid_url: Optional[str] = None

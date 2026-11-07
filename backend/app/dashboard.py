@@ -121,6 +121,31 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   <!-- MAIN DASHBOARD CONTENT -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
+    <!-- MANDATORY TARGET LOCATION BANNER -->
+    <div class="p-3.5 rounded-xl bg-slate-900/95 border border-emerald-500/30 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 flex-shrink-0">
+          <i class="fa-solid fa-location-crosshairs text-base"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs font-black uppercase tracking-wider text-slate-400">Target Location:</span>
+            <span class="px-2.5 py-0.5 rounded text-xs font-mono font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">Bengaluru Urban, Karnataka</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-300 border border-blue-500/20 font-mono">Urban PINs: 560001 - 560110</span>
+          </div>
+          <p class="text-[11px] text-slate-400 mt-0.5">
+            Strict geographic filter active: Bids with delivery in Bengaluru Rural, other districts, or outside states are rejected or isolated in the Review Queue.
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 self-end sm:self-center">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 text-[11px] font-black tracking-wide">
+          <i class="fa-solid fa-shield-halved text-xs text-emerald-400"></i>
+          <span>BENGALURU URBAN VERIFIED</span>
+        </span>
+      </div>
+    </div>
+
     <!-- METRIC METADATA CARDS -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
       
@@ -132,22 +157,22 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span>24/7 Monitoring</span>
           </p>
-          <p id="statHealthSubtitle" class="text-[10px] text-slate-500 mt-0.5">Continuous 300s Polling</p>
+          <p id="statHealthSubtitle" class="text-[10px] text-slate-500 mt-0.5">Bengaluru Urban Radar Active</p>
         </div>
         <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
           <i class="fa-solid fa-server"></i>
         </div>
       </div>
 
-      <!-- Metric 2: Active Tenders in DB -->
+      <!-- Metric 2: Verified Bengaluru Urban Bids in DB -->
       <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800/80 shadow-sm flex items-center justify-between">
         <div>
-          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Active Bids in DB</p>
-          <p id="statActiveBids" class="text-base sm:text-lg font-black text-white font-mono mt-1">-- Active</p>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Bengaluru Urban Bids</p>
+          <p id="statActiveBids" class="text-base sm:text-lg font-black text-emerald-400 font-mono mt-1">-- Verified</p>
           <p id="statTotalBids" class="text-[10px] text-slate-500 mt-0.5">-- Total Tracked</p>
         </div>
-        <div class="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-          <i class="fa-solid fa-file-invoice"></i>
+        <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+          <i class="fa-solid fa-location-dot"></i>
         </div>
       </div>
 
@@ -163,15 +188,15 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- Metric 4: Expired Tenders -->
+      <!-- Metric 4: Review Queue Count -->
       <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800/80 shadow-sm flex items-center justify-between">
         <div>
-          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Expired Bids</p>
-          <p id="statExpiredBids" class="text-base sm:text-lg font-black text-slate-400 font-mono mt-1">-- Expired</p>
-          <p class="text-[10px] text-slate-500 mt-0.5">Excluded from Active Feed</p>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Review Queue</p>
+          <p id="statReviewCount" class="text-base sm:text-lg font-black text-amber-400 font-mono mt-1">-- Review</p>
+          <p id="statExpiredBids" class="text-[10px] text-slate-500 mt-0.5">-- Expired Excluded</p>
         </div>
-        <div class="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400">
-          <i class="fa-solid fa-calendar-xmark"></i>
+        <div class="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+          <i class="fa-solid fa-clipboard-question"></i>
         </div>
       </div>
 
@@ -269,19 +294,26 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <!-- Row 1: Lifecycle Tabs & Sorting -->
         <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           
-          <!-- Status Tabs -->
-          <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
-            <button onclick="setFeedStatus('active')" id="tabActive" class="px-3 py-1.5 rounded-lg font-bold transition bg-blue-600 text-white shadow">
-              <i class="fa-solid fa-bolt-lightning mr-1 text-[11px]"></i> Active Opportunities
+          <!-- Status & Scope Tabs -->
+          <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs overflow-x-auto">
+            <button onclick="setScopeTab('bengaluru_urban', 'active')" id="tabVerified" class="px-3 py-1.5 rounded-lg font-bold transition bg-emerald-600 text-white shadow flex items-center gap-1.5 whitespace-nowrap">
+              <i class="fa-solid fa-circle-check text-[11px]"></i>
+              <span>Verified Bengaluru Urban</span>
             </button>
-            <button onclick="setFeedStatus('closing_soon')" id="tabClosingSoon" class="px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white">
-              <i class="fa-solid fa-hourglass-half mr-1 text-[11px] text-amber-400"></i> Closing Soon (&lt;24h)
+            <button onclick="setScopeTab('review', 'all')" id="tabReview" class="px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white flex items-center gap-1.5 whitespace-nowrap">
+              <i class="fa-solid fa-triangle-exclamation text-[11px] text-amber-400"></i>
+              <span>Review Queue</span>
             </button>
-            <button onclick="setFeedStatus('expired')" id="tabExpired" class="px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white">
-              <i class="fa-solid fa-archive mr-1 text-[11px]"></i> Expired Archive
+            <button onclick="setScopeTab('bengaluru_urban', 'closing_soon')" id="tabClosingSoon" class="px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white flex items-center gap-1.5 whitespace-nowrap">
+              <i class="fa-solid fa-hourglass-half text-[11px] text-amber-400"></i>
+              <span>Closing Soon (&lt;24h)</span>
             </button>
-            <button onclick="setFeedStatus('all')" id="tabAll" class="px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white">
-              All Records
+            <button onclick="setScopeTab('bengaluru_urban', 'expired')" id="tabExpired" class="px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white flex items-center gap-1.5 whitespace-nowrap">
+              <i class="fa-solid fa-archive text-[11px]"></i>
+              <span>Expired Archive</span>
+            </button>
+            <button onclick="setScopeTab('all', 'all')" id="tabAll" class="px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white whitespace-nowrap">
+              All Ingested Records
             </button>
           </div>
 
@@ -503,6 +535,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     ];
 
     // Global State
+    let currentScope = 'bengaluru_urban'; // 'bengaluru_urban' (default), 'review', 'all'
     let currentFeedStatus = 'active'; // 'active', 'closing_soon', 'expired', 'all'
     let currentSortBy = 'closing_soonest';
     let currentLocationType = 'consignee';
@@ -673,8 +706,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     // --- DATA LOADING & BACKEND SYNC ---
     async function loadDashboardData() {
       try {
-        // Build URL with categories parameter array
-        let url = `/bids/?status=${encodeURIComponent(currentFeedStatus)}&sort_by=${encodeURIComponent(currentSortBy)}&location_type=${encodeURIComponent(currentLocationType)}&limit=250`;
+        // Build URL with scope, status, sorting, and categories
+        let url = `/bids/?scope=${encodeURIComponent(currentScope)}&status=${encodeURIComponent(currentFeedStatus)}&sort_by=${encodeURIComponent(currentSortBy)}&location_type=${encodeURIComponent(currentLocationType)}&limit=250`;
         if (selectedCategories && selectedCategories.length > 0) {
           const catParams = selectedCategories.map(c => `categories=${encodeURIComponent(c)}`).join('&');
           url += `&${catParams}`;
@@ -695,9 +728,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         // Exact DB summary counts
         if (statsRes.status === 'fulfilled' && statsRes.value) {
           const s = statsRes.value;
-          document.getElementById('statActiveBids').textContent = `${s.active_bids} Active`;
-          document.getElementById('statTotalBids').textContent = `${s.total_bids} Total Tracked`;
-          document.getElementById('statExpiredBids').textContent = `${s.expired_bids} Expired`;
+          document.getElementById('statActiveBids').textContent = `${s.bengaluru_urban_verified != null ? s.bengaluru_urban_verified : s.active_bids} Verified`;
+          document.getElementById('statTotalBids').textContent = `${s.total_bids} Total Ingested`;
+          if (document.getElementById('statReviewCount')) {
+            document.getElementById('statReviewCount').textContent = `${s.review_count || 0} Review`;
+          }
+          document.getElementById('statExpiredBids').textContent = `${s.expired_bids} Expired Excluded`;
         }
 
         // Exact Alert Stats
@@ -842,11 +878,21 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           : '<span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-red-600/20 text-red-400 border border-red-500/30">MATCH</span>';
 
         // Delivery Location Representation (FEATURE 2)
+        let locBadge = '';
+        if (b.target_location_status === 'VERIFIED_BENGALURU_URBAN') {
+          locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 w-max mb-1"><i class="fa-solid fa-circle-check text-[9px]"></i> BENGALURU URBAN VERIFIED</span>';
+        } else if (b.target_location_status === 'PARTIALLY_VERIFIED' || b.target_location_status === 'AMBIGUOUS') {
+          locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30 w-max mb-1"><i class="fa-solid fa-triangle-exclamation text-[9px]"></i> REVIEW NEEDED</span>';
+        } else if (b.target_location_status === 'OUTSIDE_TARGET') {
+          locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700 w-max mb-1"><i class="fa-solid fa-location-dot text-[9px]"></i> OUTSIDE TARGET</span>';
+        }
+
         let locationMarkup = '';
         if (b.pdf_delivery_city) {
           const pinStr = b.pdf_delivery_pincode ? ` - ${escapeHtml(b.pdf_delivery_pincode)}` : '';
           locationMarkup = `
             <div class="inline-flex flex-col">
+              ${locBadge}
               <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold">
                 <i class="fa-solid fa-file-circle-check text-emerald-400 text-xs"></i>
                 <span>${escapeHtml(b.pdf_delivery_city)}, ${escapeHtml(b.pdf_delivery_state || '')}</span>
@@ -856,11 +902,13 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           `;
         } else {
           locationMarkup = `
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 text-slate-300 border border-slate-800 text-[11px]">
-              <i class="fa-solid fa-location-dot ${isExp ? 'text-slate-500' : 'text-red-400'}"></i>
-              <span>${loc}</span>
-              ${b.location_verification_status === 'VERIFIED' ? '<i class="fa-solid fa-circle-check text-[9px] text-emerald-400"></i>' : ''}
-            </span>
+            <div class="inline-flex flex-col">
+              ${locBadge}
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 text-slate-300 border border-slate-800 text-[11px]">
+                <i class="fa-solid fa-location-dot ${isExp ? 'text-slate-500' : 'text-emerald-400'}"></i>
+                <span>${loc}</span>
+              </span>
+            </div>
           `;
         }
 
@@ -1051,20 +1099,32 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     }
 
     // --- INTERACTION HANDLERS ---
-    function setFeedStatus(status) {
+    function setScopeTab(scope, status) {
+      currentScope = scope;
       currentFeedStatus = status;
-      ['tabActive', 'tabClosingSoon', 'tabExpired', 'tabAll'].forEach(id => {
-        const btn = document.getElementById(id);
-        if ((status === 'active' && id === 'tabActive') ||
-            (status === 'closing_soon' && id === 'tabClosingSoon') ||
-            (status === 'expired' && id === 'tabExpired') ||
-            (status === 'all' && id === 'tabAll')) {
-          btn.className = "px-3 py-1.5 rounded-lg font-bold transition bg-blue-600 text-white shadow";
+
+      const tabs = [
+        { id: 'tabVerified', scope: 'bengaluru_urban', status: 'active', activeClass: 'bg-emerald-600 text-white shadow' },
+        { id: 'tabReview', scope: 'review', status: 'all', activeClass: 'bg-amber-600 text-white shadow' },
+        { id: 'tabClosingSoon', scope: 'bengaluru_urban', status: 'closing_soon', activeClass: 'bg-blue-600 text-white shadow' },
+        { id: 'tabExpired', scope: 'bengaluru_urban', status: 'expired', activeClass: 'bg-slate-700 text-white shadow' },
+        { id: 'tabAll', scope: 'all', status: 'all', activeClass: 'bg-blue-600 text-white shadow' },
+      ];
+
+      tabs.forEach(t => {
+        const btn = document.getElementById(t.id);
+        if (!btn) return;
+        if (t.scope === scope && t.status === status) {
+          btn.className = `px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 whitespace-nowrap ${t.activeClass}`;
         } else {
-          btn.className = "px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white";
+          btn.className = "px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white flex items-center gap-1.5 whitespace-nowrap";
         }
       });
       loadDashboardData();
+    }
+
+    function setFeedStatus(status) {
+      setScopeTab(currentScope, status);
     }
 
     function onSortChange() {

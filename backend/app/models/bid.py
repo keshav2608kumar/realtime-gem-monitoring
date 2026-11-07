@@ -62,6 +62,7 @@ class Bid(Base):
 
     raw_location_text = Column(Text, nullable=True)
     location_verification_status = Column(String(50), default="UNKNOWN")  # VERIFIED, NORMALIZED, AMBIGUOUS, UNKNOWN
+    target_location_status = Column(String(50), default="UNKNOWN", index=True)  # VERIFIED_BENGALURU_URBAN, PARTIALLY_VERIFIED, AMBIGUOUS, OUTSIDE_TARGET, UNKNOWN
 
     # Data Provenance & Classification
     data_source_classification = Column(String(50), default="LIVE_VERIFIED")  # LIVE_VERIFIED, IMPORTED, SIMULATED
