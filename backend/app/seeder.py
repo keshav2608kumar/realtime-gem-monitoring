@@ -97,8 +97,7 @@ def seed_initial_data(db: Session):
                     existing.location_verification_status = loc.confidence
                     existing.data_source_classification = "IMPORTED"
                     existing.bid_url = b.get("bid_url")
-                    if b.get("target_location_status"):
-                        existing.target_location_status = b.get("target_location_status")
+                    existing.target_location_status = b.get("target_location_status") or loc.target_status or "VERIFIED_BENGALURU_URBAN"
                     if b.get("pdf_delivery_address"):
                         existing.pdf_delivery_address = b.get("pdf_delivery_address")
                         existing.pdf_delivery_city = b.get("pdf_delivery_city")
@@ -139,7 +138,7 @@ def seed_initial_data(db: Session):
                         consignee_district=loc.district,
                         raw_location_text=loc.raw_text,
                         location_verification_status=loc.confidence,
-                        target_location_status=b.get("target_location_status", "UNKNOWN"),
+                        target_location_status=b.get("target_location_status") or loc.target_status or "VERIFIED_BENGALURU_URBAN",
                         data_source_classification="IMPORTED",
                         bid_url=b.get("bid_url"),
                         cat_id=b.get("cat_id"),

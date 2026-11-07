@@ -124,7 +124,7 @@ def migrate_db():
         except Exception as pe:
             logger.debug(f"Notice during profiles table migration check: {pe}")
 
-        # Backfill target_location_status on bids if missing or UNKNOWN
+        # Backfill and refresh target_location_status on all existing bids
         try:
             from app.services.location_normalizer import resolve_effective_bid_delivery_location
             bids_to_loc_backfill = conn.execute(
@@ -133,7 +133,7 @@ def migrate_db():
                            pdf_delivery_state, pdf_delivery_pincode, delivery_address, delivery_city,
                            delivery_district, delivery_state, consignee_city, consignee_district,
                            consignee_state, raw_location_text, dept_name
-                    FROM bids WHERE target_location_status IS NULL OR target_location_status = 'UNKNOWN'
+                    FROM bids
                 """)
             ).fetchall()
             for b_row in bids_to_loc_backfill:
@@ -159,6 +159,7 @@ def migrate_db():
                     {"tstatus": st, "bid_id": b_row[0]}
                 )
             conn.commit()
+            logger.info("Successfully refreshed target_location_status across bids")
         except Exception as lbe:
             logger.debug(f"Notice during target_location_status backfill: {lbe}")
         try:

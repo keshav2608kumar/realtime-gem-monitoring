@@ -51,7 +51,8 @@
     "consignee_state": "KARNATAKA",
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8186593",
-    "cat_id": "comp_prin_v2"
+    "cat_id": "comp_prin_v2",
+    "target_location_status": "VERIFIED_BENGALURU_URBAN"
   },
   {
     "gem_bid_id": 8095785,
@@ -69,7 +70,8 @@
     "consignee_state": "KARNATAKA",
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8095785",
-    "cat_id": "toner_cart"
+    "cat_id": "toner_cart",
+    "target_location_status": "VERIFIED_BENGALURU_URBAN"
   },
   {
     "gem_bid_id": 8192651,
@@ -87,7 +89,8 @@
     "consignee_state": "KARNATAKA",
     "consignee_city": "Bengaluru",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8192651",
-    "cat_id": "mfp_prin"
+    "cat_id": "mfp_prin",
+    "target_location_status": "VERIFIED_BENGALURU_URBAN"
   },
   {
     "gem_bid_id": 8192076,
@@ -105,7 +108,8 @@
     "consignee_state": "KARNATAKA",
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8192076",
-    "cat_id": "cart_refill"
+    "cat_id": "cart_refill",
+    "target_location_status": "VERIFIED_BENGALURU_URBAN"
   },
   {
     "gem_bid_id": 8186128,
@@ -123,7 +127,8 @@
     "consignee_state": "KARNATAKA",
     "consignee_city": "Bengaluru",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8186128",
-    "cat_id": "ink_pack"
+    "cat_id": "ink_pack",
+    "target_location_status": "VERIFIED_BENGALURU_URBAN"
   },
   {
     "gem_bid_id": 8196969,
@@ -141,7 +146,8 @@
     "consignee_state": "KARNATAKA",
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8196969",
-    "cat_id": "toner_cart"
+    "cat_id": "toner_cart",
+    "target_location_status": "VERIFIED_BENGALURU_URBAN"
   },
   {
     "gem_bid_id": 8211130,
@@ -159,7 +165,8 @@
     "consignee_state": "KARNATAKA",
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8211130",
-    "cat_id": "drum_cart"
+    "cat_id": "drum_cart",
+    "target_location_status": "VERIFIED_BENGALURU_URBAN"
   },
   {
     "gem_bid_id": 8117647,
@@ -177,7 +184,8 @@
     "consignee_state": "KARNATAKA",
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8117647",
-    "cat_id": "mfp_prin"
+    "cat_id": "mfp_prin",
+    "target_location_status": "VERIFIED_BENGALURU_URBAN"
   },
   {
     "gem_bid_id": 8210645,
@@ -195,7 +203,8 @@
     "consignee_state": "KARNATAKA",
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8210645",
-    "cat_id": "mfp_prin"
+    "cat_id": "mfp_prin",
+    "target_location_status": "VERIFIED_BENGALURU_URBAN"
   },
   {
     "gem_bid_id": 8194494,
@@ -213,7 +222,8 @@
     "consignee_state": "KARNATAKA",
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8194494",
-    "cat_id": "toner_cart"
+    "cat_id": "toner_cart",
+    "target_location_status": "VERIFIED_BENGALURU_URBAN"
   },
   {
     "gem_bid_id": 8211464,
@@ -231,7 +241,8 @@
     "consignee_state": "KARNATAKA",
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8211464",
-    "cat_id": "toner_cart"
+    "cat_id": "toner_cart",
+    "target_location_status": "VERIFIED_BENGALURU_URBAN"
   },
   {
     "gem_bid_id": 8194412,
@@ -249,7 +260,8 @@
     "consignee_state": "KARNATAKA",
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8194412",
-    "cat_id": "comp_prin_v2"
+    "cat_id": "comp_prin_v2",
+    "target_location_status": "VERIFIED_BENGALURU_URBAN"
   },
   {
     "gem_bid_id": 8192847,
@@ -267,7 +279,8 @@
     "consignee_state": "KARNATAKA",
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8192847",
-    "cat_id": "cart_refill"
+    "cat_id": "cart_refill",
+    "target_location_status": "VERIFIED_BENGALURU_URBAN"
   },
   {
     "gem_bid_id": 8203999,
@@ -285,7 +298,8 @@
     "consignee_state": "KARNATAKA",
     "consignee_city": "Bangalore Urban",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8203999",
-    "cat_id": "toner_cart"
+    "cat_id": "toner_cart",
+    "target_location_status": "VERIFIED_BENGALURU_URBAN"
   },
   {
     "gem_bid_id": 8219901,
@@ -316,7 +330,8 @@
     "pdf_confidence_score": 0.95,
     "pdf_verification_status": "VERIFIED",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8219901",
-    "cat_id": "scanner_v3"
+    "cat_id": "scanner_v3",
+    "target_location_status": "VERIFIED_BENGALURU_URBAN"
   },
   {
     "gem_bid_id": 8219902,
@@ -347,7 +362,8 @@
     "pdf_confidence_score": 0.95,
     "pdf_verification_status": "VERIFIED",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8219902",
-    "cat_id": "high_end_desktop"
+    "cat_id": "high_end_desktop",
+    "target_location_status": "VERIFIED_BENGALURU_URBAN"
   },
   {
     "gem_bid_id": 8219903,
@@ -378,6 +394,7 @@
     "pdf_confidence_score": 0.95,
     "pdf_verification_status": "VERIFIED",
     "bid_url": "https://bidplus.gem.gov.in/showbidDocument/8219903",
-    "cat_id": "high_end_laptop"
+    "cat_id": "high_end_laptop",
+    "target_location_status": "VERIFIED_BENGALURU_URBAN"
   }
 ]
