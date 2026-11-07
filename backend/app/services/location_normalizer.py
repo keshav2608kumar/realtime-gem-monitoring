@@ -440,15 +440,25 @@ def resolve_effective_bid_delivery_location(
     pdf_pin = g("pdf_delivery_pincode")
 
     # Priority 1: PDF Extracted Delivery Address
-    if any([pdf_addr, pdf_city, pdf_state, pdf_pin]):
+    # Check if address is a diagnostic/failure placeholder rather than an address
+    is_placeholder = bool(
+        pdf_addr and any(p in str(pdf_addr).lower() for p in [
+            "could not be verified", "unavailable", "not available", "not found"
+        ])
+    )
+    valid_pdf_addr = None if is_placeholder else pdf_addr
+
+    if any([valid_pdf_addr, pdf_city, pdf_state, pdf_pin]):
         st, conf, c, d, s = classify_bengaluru_urban(
             city=pdf_city,
             district=pdf_dist,
             state=pdf_state,
-            raw_text=pdf_addr,
+            raw_text=valid_pdf_addr,
             pincode=pdf_pin,
         )
-        if st != STATUS_UNKNOWN:
+        if st in (STATUS_VERIFIED_BENGALURU_URBAN, STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS):
+            return st, conf, c, d, s
+        elif st == STATUS_OUTSIDE_TARGET and any([pdf_city, pdf_state, pdf_pin]):
             return st, conf, c, d, s
 
     # Priority 2: Structured source delivery location
@@ -463,7 +473,9 @@ def resolve_effective_bid_delivery_location(
             state=del_state,
             raw_text=del_addr,
         )
-        if st != STATUS_UNKNOWN:
+        if st in (STATUS_VERIFIED_BENGALURU_URBAN, STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS):
+            return st, conf, c, d, s
+        elif st == STATUS_OUTSIDE_TARGET and any([del_city, del_state]):
             return st, conf, c, d, s
 
     # Priority 3: Consignee location

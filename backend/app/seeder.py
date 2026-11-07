@@ -47,9 +47,15 @@ def seed_initial_data(db: Session):
 
             for b in baseline_bids:
                 start_dt = parse_datetime(b.get("start_date"))
-                end_dt = parse_datetime(b.get("end_date"))
+                orig_end_dt = parse_datetime(b.get("original_end_date"))
+                rev_end_dt = parse_datetime(b.get("revised_end_date"))
+                end_dt = rev_end_dt or parse_datetime(b.get("end_date")) or orig_end_dt
                 raw_stat = b.get("status", 1)
                 bid_status = calculate_bid_status(end_dt, raw_stat)
+                corr_status = b.get("corrigendum_status", "NONE")
+                date_src = b.get("date_source", "OFFICIAL_BID_DOCUMENT")
+                corr_details = b.get("corrigendum_details")
+                corr_url = b.get("corrigendum_doc_url")
 
                 loc = normalize_location(
                     raw_text=b.get("dept_name"),
@@ -78,6 +84,12 @@ def seed_initial_data(db: Session):
                     existing.quantity = b.get("quantity")
                     existing.start_date = start_dt
                     existing.end_date = end_dt
+                    existing.original_end_date = orig_end_dt
+                    existing.revised_end_date = rev_end_dt
+                    existing.corrigendum_status = corr_status
+                    existing.corrigendum_details = corr_details
+                    existing.corrigendum_doc_url = corr_url
+                    existing.date_source = date_src
                     existing.bid_status = bid_status
                     existing.consignee_city = loc.city
                     existing.consignee_state = loc.state
@@ -85,6 +97,8 @@ def seed_initial_data(db: Session):
                     existing.location_verification_status = loc.confidence
                     existing.data_source_classification = "IMPORTED"
                     existing.bid_url = b.get("bid_url")
+                    if b.get("target_location_status"):
+                        existing.target_location_status = b.get("target_location_status")
                     if b.get("pdf_delivery_address"):
                         existing.pdf_delivery_address = b.get("pdf_delivery_address")
                         existing.pdf_delivery_city = b.get("pdf_delivery_city")
@@ -113,12 +127,19 @@ def seed_initial_data(db: Session):
                         dept_name=b.get("dept_name"),
                         start_date=start_dt,
                         end_date=end_dt,
+                        original_end_date=orig_end_dt,
+                        revised_end_date=rev_end_dt,
+                        corrigendum_status=corr_status,
+                        corrigendum_details=corr_details,
+                        corrigendum_doc_url=corr_url,
+                        date_source=date_src,
                         bid_status=bid_status,
                         consignee_state=loc.state,
                         consignee_city=loc.city,
                         consignee_district=loc.district,
                         raw_location_text=loc.raw_text,
                         location_verification_status=loc.confidence,
+                        target_location_status=b.get("target_location_status", "UNKNOWN"),
                         data_source_classification="IMPORTED",
                         bid_url=b.get("bid_url"),
                         cat_id=b.get("cat_id"),

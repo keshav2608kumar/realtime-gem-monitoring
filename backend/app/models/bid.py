@@ -28,7 +28,13 @@ class Bid(Base):
 
     # Dates
     start_date = Column(DateTime(timezone=True), nullable=True)  # Published date
-    end_date = Column(DateTime(timezone=True), nullable=True)    # Bid deadline / closing date
+    end_date = Column(DateTime(timezone=True), nullable=True)    # Bid deadline / closing date (effective deadline)
+    original_end_date = Column(DateTime(timezone=True), nullable=True)  # Original deadline from initial tender PDF
+    revised_end_date = Column(DateTime(timezone=True), nullable=True)   # Revised deadline from corrigendum
+    corrigendum_status = Column(String(50), default="NONE")  # NONE, EXTENDED, CANCELLED
+    corrigendum_doc_url = Column(String(500), nullable=True)
+    corrigendum_details = Column(Text, nullable=True)
+    date_source = Column(String(50), default="OFFICIAL_BID_DOCUMENT")  # OFFICIAL_BID_DOCUMENT, OFFICIAL_CORRIGENDUM, API_DIRECT
     bid_status = Column(String(50), default="ACTIVE", index=True)  # ACTIVE, CLOSING_SOON, EXPIRING_TODAY, EXPIRED, etc.
 
     # Segregated Location Fields

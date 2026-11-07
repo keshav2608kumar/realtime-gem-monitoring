@@ -73,6 +73,12 @@ def migrate_db():
                     ("pdf_processed_at", "TIMESTAMP"),
                     ("pdf_doc_hash", "VARCHAR(64)"),
                     ("target_location_status", "VARCHAR(50)"),
+                    ("original_end_date", "TIMESTAMP"),
+                    ("revised_end_date", "TIMESTAMP"),
+                    ("corrigendum_status", "VARCHAR(50)"),
+                    ("corrigendum_doc_url", "VARCHAR(500)"),
+                    ("corrigendum_details", "TEXT"),
+                    ("date_source", "VARCHAR(50)"),
                 ]
                 for col_name, col_type in bid_cols_to_add:
                     if col_name not in existing_bid_cols:

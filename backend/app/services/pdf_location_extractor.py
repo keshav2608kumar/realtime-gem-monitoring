@@ -165,6 +165,10 @@ def parse_consignee_block(
         r"consignee\s*details",
         r"delivery\s*location",
         r"delivery\s*address",
+        r"location\s*of\s*consignee",
+        r"consignee\s*location",
+        r"evaluation\s*(?:method\s*&\s*)?consignee\s*location",
+        r"item\s*wise\s*consignee\s*wise",
     ]
 
     has_marker = any(re.search(p, page_text, re.IGNORECASE) for p in markers)
@@ -254,6 +258,10 @@ def parse_consignee_block(
     # Rule 2: Verified — City, State, and PIN code present
     elif city and final_state and pincode:
         confidence = 0.88
+        status = "VERIFIED"
+    # Rule 2b: Verified Schedule / Administrative — City, District, and State definitively identified
+    elif city and district and final_state and ("urban" in str(district).lower() or "bengaluru" in str(district).lower() or "bangalore" in str(district).lower()):
+        confidence = 0.90
         status = "VERIFIED"
     # Rule 3: Partially Verified — City and State identified without full PIN validation
     elif city and final_state:

@@ -392,7 +392,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <div>
           Showing <span id="lblShownCount" class="font-bold text-white">0</span> of <span id="lblFilteredCount" class="font-bold text-white">0</span> tenders
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] text-slate-500 uppercase font-bold">Status:</span>
+            <span id="lblStateBadge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">LOADING</span>
+          </div>
+          <span class="hidden sm:inline text-slate-600">|</span>
           <span>Source: <strong>Government e-Marketplace (GeM India)</strong></span>
         </div>
       </div>
@@ -443,6 +448,35 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <div>
           <span class="text-[10px] font-bold uppercase text-slate-500">Time Remaining</span>
           <p id="detailTimeRem" class="font-semibold text-emerald-400 mt-0.5">--</p>
+        </div>
+      </div>
+
+      <!-- DEDICATED SECTION: CORRIGENDUM INTELLIGENCE -->
+      <div id="detailCorrigendumBox" class="hidden p-3.5 rounded-xl bg-amber-950/25 border border-amber-500/30 space-y-2 text-xs">
+        <div class="flex items-center justify-between border-b border-amber-500/20 pb-1.5">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-clock-rotate-left text-amber-400 text-sm"></i>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-amber-300">Corrigendum Extension Notice</h4>
+          </div>
+          <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">DEADLINE REVISED</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1 font-mono text-[11px]">
+          <div>
+            <span class="text-[10px] uppercase font-bold text-slate-400 font-sans block">Original Deadline</span>
+            <span id="detailOrigEndDate" class="text-slate-400 line-through">--</span>
+          </div>
+          <div>
+            <span class="text-[10px] uppercase font-bold text-slate-400 font-sans block">Revised Deadline</span>
+            <span id="detailRevEndDate" class="font-bold text-amber-300">--</span>
+          </div>
+          <div>
+            <span class="text-[10px] uppercase font-bold text-slate-400 font-sans block">Date Source</span>
+            <span id="detailCorrSource" class="font-bold text-emerald-400">OFFICIAL_CORRIGENDUM</span>
+          </div>
+        </div>
+        <div class="pt-1.5 border-t border-amber-500/10">
+          <span class="text-[10px] uppercase font-bold text-slate-400 font-sans block">Official Corrigendum Details</span>
+          <p id="detailCorrNotes" class="text-slate-300 font-sans text-xs mt-0.5">--</p>
         </div>
       </div>
 
@@ -543,6 +577,27 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     let allBids = [];
     let activeAlertId = null;
     let currentModalBid = null;
+    let currentTableState = 'LOADING'; // LOADING, LIVE_DATA, EMPTY_RESULTS, SOURCE_ERROR, BACKEND_ERROR, STALE_DATA
+    let lastTableErrorMessage = '';
+
+    function updateStateBadge(state, msg = '') {
+      currentTableState = state;
+      lastTableErrorMessage = msg;
+      const b = document.getElementById('lblStateBadge');
+      if (!b) return;
+      b.textContent = state;
+      if (state === 'LIVE_DATA') {
+        b.className = "px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+      } else if (state === 'LOADING') {
+        b.className = "px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20";
+      } else if (state === 'EMPTY_RESULTS') {
+        b.className = "px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700";
+      } else if (state === 'STALE_DATA') {
+        b.className = "px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20";
+      } else {
+        b.className = "px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/10 text-red-400 border border-red-500/20";
+      }
+    }
 
     // Persisted Category Selection (localStorage)
     let selectedCategories = [];
@@ -627,9 +682,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       }
     }
 
-    function dismissSirenModal() {
+    async function dismissSirenModal() {
       stopAudioSiren();
       document.getElementById('redAlertModal').classList.add('hidden');
+      if (activeAlertId) {
+        try {
+          await fetch(`/alerts/${activeAlertId}/ack`, { method: 'POST' });
+        } catch (e) {}
+      }
     }
 
     // --- CATEGORY FILTER UI CONTROLS (FEATURE 1) ---
@@ -705,6 +765,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
     // --- DATA LOADING & BACKEND SYNC ---
     async function loadDashboardData() {
+      if (!allBids || allBids.length === 0) {
+        updateStateBadge('LOADING');
+      }
+
       try {
         // Build URL with scope, status, sorting, and categories
         let url = `/bids/?scope=${encodeURIComponent(currentScope)}&status=${encodeURIComponent(currentFeedStatus)}&sort_by=${encodeURIComponent(currentSortBy)}&location_type=${encodeURIComponent(currentLocationType)}&limit=250`;
@@ -714,7 +778,13 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         }
 
         const [bidsRes, statsRes, alertsRes, healthRes] = await Promise.allSettled([
-          fetch(url).then(r => r.ok ? r.json() : []),
+          fetch(url).then(async r => {
+            if (!r.ok) {
+              const errTxt = await r.text().catch(() => '');
+              throw new Error(`HTTP ${r.status}: ${r.statusText || 'Fetch Error'}`);
+            }
+            return await r.json();
+          }),
           fetch('/bids/summary/stats').then(r => r.ok ? r.json() : null),
           fetch('/alerts/stats').then(r => r.ok ? r.json() : null),
           fetch('/health/').then(r => r.ok ? r.json() : null),
@@ -722,8 +792,22 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
         if (bidsRes.status === 'fulfilled') {
           allBids = bidsRes.value || [];
-          renderBidsTable();
+          if (allBids.length > 0) {
+            updateStateBadge('LIVE_DATA');
+          } else {
+            updateStateBadge('EMPTY_RESULTS');
+          }
+        } else {
+          const errDetail = bidsRes.reason ? bidsRes.reason.message : 'Network error';
+          if (allBids && allBids.length > 0) {
+            updateStateBadge('STALE_DATA', errDetail);
+          } else {
+            const errType = (errDetail && errDetail.includes('500')) ? 'BACKEND_ERROR' : 'SOURCE_ERROR';
+            updateStateBadge(errType, errDetail);
+          }
         }
+
+        renderBidsTable();
 
         // Exact DB summary counts
         if (statsRes.status === 'fulfilled' && statsRes.value) {
@@ -756,6 +840,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
       } catch (err) {
         console.error('Dashboard load error:', err);
+        if (!allBids || allBids.length === 0) {
+          updateStateBadge('BACKEND_ERROR', err.message);
+          renderBidsTable();
+        }
       }
     }
 
@@ -768,8 +856,15 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           const topAlert = alerts[0];
           activeAlertId = topAlert.id;
           const bid = topAlert.bid;
-          if (bid) {
+          if (bid && bid.bid_number) {
             renderActiveBanner(topAlert, bid);
+            // Safely populate modal fields so it never shows placeholder '--'
+            document.getElementById('modalTenderNo').textContent = bid.bid_number;
+            document.getElementById('modalCategory').textContent = bid.category_name || 'GeM Procurement';
+            document.getElementById('modalDept').textContent = bid.dept_name || bid.ministry_name || 'Government Organization';
+            document.getElementById('modalLocation').textContent = bid.display_location || 'Bengaluru Urban, Karnataka';
+            document.getElementById('modalEndDate').textContent = `${bid.end_date_formatted || 'N/A'} ${bid.end_time_formatted ? '(' + bid.end_time_formatted + ' IST)' : ''}`;
+            document.getElementById('modalDocLink').href = bid.bid_url || '#';
             playAudioSiren();
           }
         }
@@ -779,6 +874,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     }
 
     function renderActiveBanner(alert, bid) {
+      if (!bid || !bid.bid_number) return;
       document.getElementById('bannerTenderNo').textContent = bid.bid_number || 'Tender Alert';
       document.getElementById('bannerLocation').textContent = bid.display_location || 'Location Not Available';
       document.getElementById('bannerDept').textContent = bid.dept_name || bid.ministry_name || 'Government Organization';
@@ -805,7 +901,42 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       const tbody = document.getElementById('bidsTableBody');
       const q = searchQuery.toLowerCase().trim();
 
-      // If user cleared all categories, feed is empty by definition
+      // State 1: Explicit Loading State
+      if (currentTableState === 'LOADING' && (!allBids || allBids.length === 0)) {
+        document.getElementById('lblShownCount').textContent = 0;
+        document.getElementById('lblFilteredCount').textContent = 0;
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="py-14 text-center text-slate-400">
+              <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-500 mb-2 block"></i>
+              <p class="font-bold text-slate-200">Loading verified GeM tenders...</p>
+              <p class="text-xs text-slate-500 mt-1">Connecting to Bengaluru Urban verified procurement registry.</p>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      // State 2: Explicit Error States (BACKEND_ERROR / SOURCE_ERROR)
+      if ((currentTableState === 'BACKEND_ERROR' || currentTableState === 'SOURCE_ERROR') && (!allBids || allBids.length === 0)) {
+        document.getElementById('lblShownCount').textContent = 0;
+        document.getElementById('lblFilteredCount').textContent = 0;
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="py-14 text-center text-red-400">
+              <i class="fa-solid fa-triangle-exclamation text-3xl mb-2 text-red-500 block"></i>
+              <p class="font-bold text-red-300">Connection Error (${escapeHtml(currentTableState)})</p>
+              <p class="text-xs text-slate-400 mt-1 font-mono">${escapeHtml(lastTableErrorMessage || 'Failed to fetch verified bids from GeM registry.')}</p>
+              <button onclick="loadDashboardData()" class="mt-3 px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition">
+                <i class="fa-solid fa-arrows-rotate mr-1"></i> Retry Connection
+              </button>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      // State 3: If user cleared all categories, feed is empty by definition
       if (!selectedCategories || selectedCategories.length === 0) {
         document.getElementById('lblShownCount').textContent = 0;
         document.getElementById('lblFilteredCount').textContent = 0;
@@ -958,9 +1089,13 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
             <!-- Bid Deadline (IST) & Time Remaining -->
             <td class="py-3 px-4 whitespace-nowrap align-top">
-              <div class="font-mono text-[11px] font-bold ${isExp ? 'text-slate-500' : 'text-amber-300'}">${endDate}</div>
+              <div class="flex items-center gap-1.5">
+                <span class="font-mono text-[11px] font-bold ${isExp ? 'text-slate-500' : 'text-amber-300'}">${endDate}</span>
+                ${b.corrigendum_status === 'EXTENDED' ? '<span class="px-1.5 py-0.2 rounded text-[8px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30" title="Corrigendum Extension Applied">EXTENDED</span>' : ''}
+              </div>
               ${endTime ? `<div class="text-[10px] text-slate-400 font-mono">${endTime}</div>` : ''}
               ${timeRem ? `<div class="text-[10px] font-semibold ${isExp ? 'text-slate-500' : 'text-emerald-400'} mt-0.5">${timeRem}</div>` : ''}
+              ${b.original_end_date_formatted ? `<div class="text-[9px] text-slate-500 line-through mt-0.5 font-mono" title="Original Tender Deadline">Orig: ${escapeHtml(b.original_end_date_formatted)}</div>` : ''}
             </td>
 
             <!-- Actions: Details Modal + PDF -->
@@ -999,6 +1134,20 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       document.getElementById('detailEndDate').textContent = `${bid.end_date_formatted || 'N/A'} ${bid.end_time_formatted || ''}`;
       document.getElementById('detailTimeRem').textContent = bid.time_remaining || 'N/A';
       document.getElementById('detailPdfLink').href = bid.bid_url || '#';
+
+      // Corrigendum Intelligence
+      const corrBox = document.getElementById('detailCorrigendumBox');
+      if (corrBox) {
+        if (bid.corrigendum_status === 'EXTENDED') {
+          corrBox.classList.remove('hidden');
+          document.getElementById('detailOrigEndDate').textContent = `${bid.original_end_date_formatted || 'N/A'} ${bid.original_end_time_formatted || ''}`;
+          document.getElementById('detailRevEndDate').textContent = `${bid.revised_end_date_formatted || bid.end_date_formatted || 'N/A'} ${bid.revised_end_time_formatted || bid.end_time_formatted || ''}`;
+          document.getElementById('detailCorrSource').textContent = bid.date_source || 'OFFICIAL_CORRIGENDUM';
+          document.getElementById('detailCorrNotes').textContent = bid.corrigendum_details || 'Bid closing deadline extended via official GeM Corrigendum';
+        } else {
+          corrBox.classList.add('hidden');
+        }
+      }
 
       renderModalPdfContent(bid);
       document.getElementById('bidDetailModal').classList.remove('hidden');

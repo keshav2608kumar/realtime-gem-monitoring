@@ -24,6 +24,12 @@ class BidBase(BaseModel):
     dept_name: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+    original_end_date: Optional[datetime] = None
+    revised_end_date: Optional[datetime] = None
+    corrigendum_status: Optional[str] = "NONE"
+    corrigendum_doc_url: Optional[str] = None
+    corrigendum_details: Optional[str] = None
+    date_source: Optional[str] = "OFFICIAL_BID_DOCUMENT"
     bid_status: Optional[str] = "ACTIVE"
 
     # Location Breakdown
@@ -76,6 +82,10 @@ class BidOut(BidBase):
     published_time: Optional[str] = None
     end_date_formatted: Optional[str] = None
     end_time_formatted: Optional[str] = None
+    original_end_date_formatted: Optional[str] = None
+    original_end_time_formatted: Optional[str] = None
+    revised_end_date_formatted: Optional[str] = None
+    revised_end_time_formatted: Optional[str] = None
     time_remaining: Optional[str] = None
     display_location: Optional[str] = None
 
