@@ -89,19 +89,13 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- Controls & Siren Toggle -->
+      <!-- Controls -->
       <div class="flex items-center gap-3">
         <!-- Live Countdown -->
         <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-400">
           <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
           <span>Next Scan: <strong id="refreshTimer" class="text-slate-200 font-mono">15s</strong></span>
         </div>
-
-        <!-- Audio Siren Toggle -->
-        <button id="btnAlarmToggle" onclick="toggleAudioAlarm()" class="px-3 py-1.5 rounded-lg text-xs font-bold border transition flex items-center gap-2 bg-red-950/40 text-red-400 border-red-500/30 hover:bg-red-900/50">
-          <i id="alarmIcon" class="fa-solid fa-volume-high"></i>
-          <span id="alarmText" class="hidden sm:inline">Siren: ON</span>
-        </button>
 
         <!-- Refresh Button -->
         <button onclick="triggerImmediateRefresh()" title="Trigger GeM Poller" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
@@ -340,12 +334,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           
           <!-- Location Scope Selector -->
           <div class="flex items-center gap-2 text-xs text-slate-400">
-            <span class="font-bold text-[10px] uppercase tracking-wider text-slate-500">Location Filter Target:</span>
-            <select id="locationTypeSelect" onchange="onLocationTypeChange()" class="px-2.5 py-1 rounded-lg bg-slate-950 text-slate-200 border border-slate-800 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500">
-              <option value="consignee" selected>Consignee / Delivery Address</option>
-              <option value="pdf_delivery">PDF Extracted Address Only</option>
-              <option value="buyer">Buyer Organization Only</option>
-              <option value="any">Any Available Location</option>
+            <span class="font-bold text-[10px] uppercase tracking-wider text-slate-500"><i class="fa-solid fa-location-crosshairs mr-1 text-blue-400"></i>Target Location:</span>
+            <select id="locationTargetSelect" onchange="onLocationTargetChange()" class="px-2.5 py-1 rounded-lg bg-slate-950 text-slate-200 border border-slate-800 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer">
+              <option value="all_bengaluru" selected>All Bengaluru Targets</option>
+              <option value="bengaluru_city">Bengaluru City</option>
+              <option value="bengaluru_urban">Bengaluru Urban District</option>
             </select>
           </div>
 
@@ -514,10 +507,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- RED ALERT SIREN POPUP MODAL -->
+  <!-- VISUAL MATCH ALERT POPUP MODAL -->
   <div id="redAlertModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-slate-900 border-2 border-red-500 rounded-2xl max-w-lg w-full p-6 shadow-2xl shadow-red-500/20 text-center space-y-4">
-      <div class="w-16 h-16 rounded-full bg-red-600/20 border-2 border-red-500 flex items-center justify-center text-red-500 mx-auto text-2xl radar-pulse">
+      <div class="w-16 h-16 rounded-full bg-red-600/20 border-2 border-red-500 flex items-center justify-center text-red-500 mx-auto text-2xl">
         <i class="fa-solid fa-bell"></i>
       </div>
       <div>
@@ -544,8 +537,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       </div>
 
       <div class="flex items-center justify-center gap-3 pt-2">
-        <button onclick="dismissSirenModal()" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition">
-          Dismiss & Mute
+        <button onclick="dismissAlertModal()" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition">
+          Dismiss & Acknowledge
         </button>
         <a id="modalDocLink" href="#" target="_blank" class="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-bold text-white shadow-lg shadow-red-600/30 transition flex items-center gap-1.5">
           <i class="fa-solid fa-file-pdf"></i>
@@ -572,7 +565,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     let currentScope = 'bengaluru_urban'; // 'bengaluru_urban' (default), 'review', 'all'
     let currentFeedStatus = 'active'; // 'active', 'closing_soon', 'expired', 'all'
     let currentSortBy = 'closing_soonest';
-    let currentLocationType = 'consignee';
+    let currentLocationTarget = 'all_bengaluru'; // 'all_bengaluru', 'bengaluru_city', 'bengaluru_urban'
+    try {
+      const storedLoc = localStorage.getItem('gem_location_target');
+      if (storedLoc && ['all_bengaluru', 'bengaluru_city', 'bengaluru_urban'].includes(storedLoc)) {
+        currentLocationTarget = storedLoc;
+      }
+    } catch (e) {}
+
     let searchQuery = '';
     let allBids = [];
     let activeAlertId = null;
@@ -614,82 +614,25 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       selectedCategories = CANONICAL_CATEGORIES.map(c => c.id);
     }
 
-    // Siren Audio Context
-    let audioCtx = null;
-    let sirenOsc = null;
-    let sirenGain = null;
-    let sirenTimer = null;
-    let audioMuted = false;
-
-    function getAudioContext() {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      return audioCtx;
-    }
-
-    function toggleAudioAlarm() {
-      audioMuted = !audioMuted;
-      const btn = document.getElementById('btnAlarmToggle');
-      const icon = document.getElementById('alarmIcon');
-      const text = document.getElementById('alarmText');
-
-      if (audioMuted) {
-        stopAudioSiren();
-        btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold border transition flex items-center gap-2 bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700";
-        icon.className = "fa-solid fa-volume-xmark";
-        text.textContent = "Siren: MUTED";
-      } else {
-        btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold border transition flex items-center gap-2 bg-red-950/40 text-red-400 border-red-500/30 hover:bg-red-900/50";
-        icon.className = "fa-solid fa-volume-high";
-        text.textContent = "Siren: ON";
-      }
-    }
-
-    function playAudioSiren() {
-      if (audioMuted) return;
-      try {
-        const ctx = getAudioContext();
-        if (ctx.state === 'suspended') ctx.resume();
-        if (sirenOsc) return;
-
-        sirenOsc = ctx.createOscillator();
-        sirenGain = ctx.createGain();
-        sirenOsc.type = 'sawtooth';
-        sirenOsc.frequency.setValueAtTime(800, ctx.currentTime);
-
-        let high = false;
-        sirenTimer = setInterval(() => {
-          if (!sirenOsc) return;
-          sirenOsc.frequency.setValueAtTime(high ? 800 : 1200, ctx.currentTime);
-          high = !high;
-        }, 350);
-
-        sirenGain.gain.setValueAtTime(0.25, ctx.currentTime);
-        sirenOsc.connect(sirenGain);
-        sirenGain.connect(ctx.destination);
-        sirenOsc.start();
-      } catch (e) {
-        console.warn('Audio notice:', e);
-      }
-    }
-
-    function stopAudioSiren() {
-      if (sirenTimer) { clearInterval(sirenTimer); sirenTimer = null; }
-      if (sirenOsc) {
-        try { sirenOsc.stop(); sirenOsc.disconnect(); } catch (e) {}
-        sirenOsc = null;
-      }
-    }
-
-    async function dismissSirenModal() {
-      stopAudioSiren();
+    async function dismissAlertModal() {
       document.getElementById('redAlertModal').classList.add('hidden');
       if (activeAlertId) {
         try {
           await fetch(`/alerts/${activeAlertId}/ack`, { method: 'POST' });
         } catch (e) {}
       }
+    }
+
+    function onLocationTargetChange() {
+      const select = document.getElementById('locationTargetSelect');
+      if (select) {
+        currentLocationTarget = select.value;
+        try {
+          localStorage.setItem('gem_location_target', currentLocationTarget);
+        } catch (e) {}
+      }
+      renderCategoryCheckboxes();
+      loadDashboardData();
     }
 
     // --- CATEGORY FILTER UI CONTROLS (FEATURE 1) ---
@@ -714,12 +657,20 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       }).join('');
 
       // Render summary chips
+      const locNames = {
+        'all_bengaluru': 'ALL BENGALURU TARGETS',
+        'bengaluru_city': 'BENGALURU CITY',
+        'bengaluru_urban': 'BENGALURU URBAN DISTRICT'
+      };
+      const locChip = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20 text-[10px] font-bold"><i class="fa-solid fa-location-crosshairs text-[9px] mr-0.5 text-blue-400"></i>${locNames[currentLocationTarget] || 'BENGALURU'}</span>`;
+
+      let catChipsHtml = '';
       if (selectedCategories.length === 0) {
-        chipsContainer.innerHTML = '<span class="text-red-400 font-bold italic text-[11px]"><i class="fa-solid fa-triangle-exclamation mr-1"></i>None selected (Feed empty)</span>';
+        catChipsHtml = '<span class="text-red-400 font-bold italic text-[11px]"><i class="fa-solid fa-triangle-exclamation mr-1"></i>None selected (Feed empty)</span>';
       } else if (selectedCategories.length === CANONICAL_CATEGORIES.length) {
-        chipsContainer.innerHTML = '<span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20 font-bold text-[10px]">ALL 7 TARGET CATEGORIES</span>';
+        catChipsHtml = '<span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20 font-bold text-[10px]">ALL 7 TARGET CATEGORIES</span>';
       } else {
-        chipsContainer.innerHTML = selectedCategories.map(catId => {
+        catChipsHtml = selectedCategories.map(catId => {
           const cat = CANONICAL_CATEGORIES.find(c => c.id === catId);
           const label = cat ? cat.name : catId;
           return `
@@ -730,6 +681,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           `;
         }).join('');
       }
+      chipsContainer.innerHTML = locChip + catChipsHtml;
     }
 
     function toggleCategory(catId) {
@@ -770,8 +722,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       }
 
       try {
-        // Build URL with scope, status, sorting, and categories
-        let url = `/bids/?scope=${encodeURIComponent(currentScope)}&status=${encodeURIComponent(currentFeedStatus)}&sort_by=${encodeURIComponent(currentSortBy)}&location_type=${encodeURIComponent(currentLocationType)}&limit=250`;
+        // Build URL with scope, status, sorting, categories and location target
+        let url = `/bids/?scope=${encodeURIComponent(currentScope)}&status=${encodeURIComponent(currentFeedStatus)}&sort_by=${encodeURIComponent(currentSortBy)}&location_target=${encodeURIComponent(currentLocationTarget)}&limit=250`;
         if (selectedCategories && selectedCategories.length > 0) {
           const catParams = selectedCategories.map(c => `categories=${encodeURIComponent(c)}`).join('&');
           url += `&${catParams}`;
@@ -812,7 +764,13 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         // Exact DB summary counts
         if (statsRes.status === 'fulfilled' && statsRes.value) {
           const s = statsRes.value;
-          document.getElementById('statActiveBids').textContent = `${s.bengaluru_urban_verified != null ? s.bengaluru_urban_verified : s.active_bids} Verified`;
+          let verifiedCount = s.bengaluru_total_verified != null ? s.bengaluru_total_verified : s.bengaluru_urban_verified;
+          if (currentLocationTarget === 'bengaluru_urban') {
+            verifiedCount = s.bengaluru_urban_verified != null ? s.bengaluru_urban_verified : s.active_bids;
+          } else if (currentLocationTarget === 'bengaluru_city') {
+            verifiedCount = s.bengaluru_city_verified != null ? s.bengaluru_city_verified : 0;
+          }
+          document.getElementById('statActiveBids').textContent = `${verifiedCount} Verified`;
           document.getElementById('statTotalBids').textContent = `${s.total_bids} Total Ingested`;
           if (document.getElementById('statReviewCount')) {
             document.getElementById('statReviewCount').textContent = `${s.review_count || 0} Review`;
@@ -835,7 +793,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             : `<span class="w-2 h-2 rounded-full bg-amber-500"></span><span>Engine Paused</span>`;
         }
 
-        // Check if there is an unacknowledged alert to trigger banner/siren
+        // Check if there is an unacknowledged alert to trigger banner/modal
         checkUnacknowledgedAlerts();
 
       } catch (err) {
@@ -865,7 +823,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             document.getElementById('modalLocation').textContent = bid.display_location || 'Bengaluru Urban, Karnataka';
             document.getElementById('modalEndDate').textContent = `${bid.end_date_formatted || 'N/A'} ${bid.end_time_formatted ? '(' + bid.end_time_formatted + ' IST)' : ''}`;
             document.getElementById('modalDocLink').href = bid.bid_url || '#';
-            playAudioSiren();
           }
         }
       } catch (e) {
@@ -888,7 +845,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       if (!activeAlertId) return;
       try {
         await fetch(`/alerts/${activeAlertId}/ack`, { method: 'POST' });
-        stopAudioSiren();
         document.getElementById('activeAlertBanner').classList.add('hidden');
         loadDashboardData();
       } catch (e) {
@@ -1008,10 +964,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           ? '<span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-slate-800 text-slate-400 border border-slate-700">EXPIRED</span>'
           : '<span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-red-600/20 text-red-400 border border-red-500/30">MATCH</span>';
 
-        // Delivery Location Representation (FEATURE 2)
+        // Delivery Location Representation
         let locBadge = '';
         if (b.target_location_status === 'VERIFIED_BENGALURU_URBAN') {
-          locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 w-max mb-1"><i class="fa-solid fa-circle-check text-[9px]"></i> BENGALURU URBAN VERIFIED</span>';
+          locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 w-max mb-1"><i class="fa-solid fa-circle-check text-[9px]"></i> BENGALURU URBAN</span>';
+        } else if (b.target_location_status === 'VERIFIED_BENGALURU_CITY') {
+          locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-500/20 text-blue-300 border border-blue-500/30 w-max mb-1"><i class="fa-solid fa-circle-check text-[9px]"></i> BENGALURU CITY</span>';
         } else if (b.target_location_status === 'PARTIALLY_VERIFIED' || b.target_location_status === 'AMBIGUOUS') {
           locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30 w-max mb-1"><i class="fa-solid fa-triangle-exclamation text-[9px]"></i> REVIEW NEEDED</span>';
         } else if (b.target_location_status === 'OUTSIDE_TARGET') {
@@ -1282,8 +1240,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     }
 
     function onLocationTypeChange() {
-      currentLocationType = document.getElementById('locationTypeSelect').value;
-      loadDashboardData();
+      onLocationTargetChange();
     }
 
     function onSearchInput() {
@@ -1343,6 +1300,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
     // Initial Startup Load
     document.addEventListener('DOMContentLoaded', () => {
+      const locSelect = document.getElementById('locationTargetSelect');
+      if (locSelect) locSelect.value = currentLocationTarget;
       renderCategoryCheckboxes();
       loadDashboardData();
     });

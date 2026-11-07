@@ -11,7 +11,7 @@ from app.schemas import BidCreate, ProfileOut
 from app.services.location_normalizer import (
     resolve_state, clean_text, CITY_DISTRICT_TO_STATE,
     resolve_effective_bid_delivery_location, STATUS_VERIFIED_BENGALURU_URBAN,
-    STATUS_OUTSIDE_TARGET, STATUS_PARTIALLY_VERIFIED
+    STATUS_VERIFIED_BENGALURU_CITY, STATUS_OUTSIDE_TARGET, STATUS_PARTIALLY_VERIFIED
 )
 from app.services.category_service import match_category
 
@@ -74,10 +74,10 @@ def match_bid_to_profile(bid: BidCreate, profile: ProfileOut) -> MatchResult:
                 break
 
     if prof_targets_bengaluru:
-        if eff_status != STATUS_VERIFIED_BENGALURU_URBAN:
+        if eff_status not in (STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY):
             return MatchResult(
                 False, [],
-                f"Location rejected: Delivery status is '{eff_status}' (Requires VERIFIED_BENGALURU_URBAN)"
+                f"Location rejected: Delivery status is '{eff_status}' (Requires VERIFIED_BENGALURU_URBAN or VERIFIED_BENGALURU_CITY)"
             )
     if profile.cities and len(profile.cities) > 0:
         bid_city_raw = eff_city or bid.consignee_city or (bid.buyer_city if not eff_state else None)
@@ -98,10 +98,10 @@ def match_bid_to_profile(bid: BidCreate, profile: ProfileOut) -> MatchResult:
             if not c_clean:
                 continue
 
-            # Special case for Bengaluru Urban verified match
+            # Special case for Bengaluru Urban & City verified match
             if (
                 re.search(r"\b(?:bengaluru|bangalore)\b", c_clean)
-                and eff_status == STATUS_VERIFIED_BENGALURU_URBAN
+                and eff_status in (STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY)
             ):
                 city_matched = True
                 break

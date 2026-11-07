@@ -18,8 +18,8 @@ from app.services.bid_status_service import (
 )
 from app.services.location_normalizer import (
     normalize_location, resolve_effective_bid_delivery_location,
-    STATUS_VERIFIED_BENGALURU_URBAN, STATUS_PARTIALLY_VERIFIED,
-    STATUS_AMBIGUOUS, STATUS_OUTSIDE_TARGET, STATUS_UNKNOWN
+    STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY,
+    STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS, STATUS_OUTSIDE_TARGET, STATUS_UNKNOWN
 )
 from app.services.category_service import match_category, get_all_target_categories, CATEGORIES_BY_ID
 from app.services.pdf_location_extractor import extract_location_from_pdf
@@ -154,11 +154,15 @@ def list_bids(
     ),
     scope: Optional[str] = Query(
         default=None,
-        description="Target location scope: 'bengaluru_urban' (verified matching feed), 'review', 'outside', 'all'"
+        description="Target location scope: 'all_bengaluru', 'bengaluru_urban', 'bengaluru_city', 'review', 'outside', 'all'"
+    ),
+    location_target: Optional[str] = Query(
+        default=None,
+        description="Filter by location target: 'all_bengaluru' (city and urban district), 'bengaluru_city', 'bengaluru_urban', 'review', 'outside', 'all'"
     ),
     target_status: Optional[str] = Query(
         default=None,
-        description="Filter by exact target_location_status (e.g. VERIFIED_BENGALURU_URBAN, PARTIALLY_VERIFIED, AMBIGUOUS, OUTSIDE_TARGET, UNKNOWN)"
+        description="Filter by exact target_location_status (e.g. VERIFIED_BENGALURU_URBAN, VERIFIED_BENGALURU_CITY, PARTIALLY_VERIFIED, AMBIGUOUS, OUTSIDE_TARGET, UNKNOWN)"
     ),
     dept: Optional[str] = None,
     source_type: Optional[str] = None,
@@ -262,10 +266,27 @@ def list_bids(
     # 4. Target Location Scope Filter
     if target_status:
         q = q.filter(Bid.target_location_status == target_status.strip().upper())
+    elif location_target:
+        loc_tgt = location_target.lower().strip()
+        if loc_tgt in ("all_bengaluru", "all_bengaluru_targets", "bengaluru_all"):
+            q = q.filter(Bid.target_location_status.in_([STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY]))
+        elif loc_tgt in ("bengaluru_city", "bangalore_city", "city"):
+            q = q.filter(Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY)
+        elif loc_tgt in ("bengaluru_urban", "bangalore_urban", "urban", "district"):
+            q = q.filter(Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN)
+        elif loc_tgt in ("review", "partially_verified", "ambiguous", "unverified"):
+            q = q.filter(Bid.target_location_status.in_([STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS, STATUS_UNKNOWN]))
+        elif loc_tgt in ("outside", "outside_target"):
+            q = q.filter(Bid.target_location_status == STATUS_OUTSIDE_TARGET)
+        # 'all' applies no target location filtering
     elif scope:
         scope_clean = scope.lower().strip()
-        if scope_clean in ("bengaluru_urban", "bangalore_urban", "verified", "target", "matching"):
+        if scope_clean in ("bengaluru_urban", "bangalore_urban"):
             q = q.filter(Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN)
+        elif scope_clean in ("bengaluru_city", "bangalore_city"):
+            q = q.filter(Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY)
+        elif scope_clean in ("all_bengaluru", "bengaluru", "verified", "target", "matching"):
+            q = q.filter(Bid.target_location_status.in_([STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY]))
         elif scope_clean in ("review", "partially_verified", "ambiguous", "unverified"):
             q = q.filter(Bid.target_location_status.in_([STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS, STATUS_UNKNOWN]))
         elif scope_clean in ("outside", "outside_target"):
@@ -325,6 +346,14 @@ def get_bids_summary_stats(db: Session = Depends(get_db)):
         Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN,
         or_(Bid.end_date == None, Bid.end_date > now)
     ).count()
+    bengaluru_city_verified = db.query(Bid).filter(
+        Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY,
+        or_(Bid.end_date == None, Bid.end_date > now)
+    ).count()
+    bengaluru_total_verified = db.query(Bid).filter(
+        Bid.target_location_status.in_([STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY]),
+        or_(Bid.end_date == None, Bid.end_date > now)
+    ).count()
     review_count = db.query(Bid).filter(
         Bid.target_location_status.in_([STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS, STATUS_UNKNOWN]),
         or_(Bid.end_date == None, Bid.end_date > now)
@@ -338,6 +367,8 @@ def get_bids_summary_stats(db: Session = Depends(get_db)):
         "active_bids": active,
         "expired_bids": expired,
         "bengaluru_urban_verified": bengaluru_urban_verified,
+        "bengaluru_city_verified": bengaluru_city_verified,
+        "bengaluru_total_verified": bengaluru_total_verified,
         "review_count": review_count,
         "outside_target_count": outside_target_count,
         "timestamp_utc": now.isoformat(),

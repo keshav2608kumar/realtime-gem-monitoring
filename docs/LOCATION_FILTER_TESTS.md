@@ -1,68 +1,66 @@
-# GeM BidWatch — Location Normalization & Strict Bengaluru Urban Scoping
+# GeM BidWatch — Location Normalization & Dual Target Support (Bengaluru City & Urban District)
 
-**Target District:** `Bengaluru Urban, Karnataka, India` (Mandatory Target)  
-**Strict Boundary:** Only bids whose verified consignee delivery location is within Bengaluru Urban enter the verified feed. All other districts, states, and ambiguous records are strictly isolated.
+**Target Locations Supported:**
+1. **Bengaluru City (Bangalore City)** (`STATUS_VERIFIED_BENGALURU_CITY`)
+2. **Bengaluru Urban District** (`STATUS_VERIFIED_BENGALURU_URBAN`)
 
----
-
-## 1. Geographical Normalization Matrix
-
-The system implements strict deterministic classification in `location_normalizer.py`:
-
-| Input Location Details | Expected Target Status | Classification Rule |
-|:---|:---:|:---|
-| Bangalore Urban, Karnataka | `VERIFIED_BENGALURU_URBAN` | Explicit district & state match |
-| Bengaluru, Karnataka (PIN 560094) | `VERIFIED_BENGALURU_URBAN` | Bengaluru Urban PIN range (`560001` - `560110`) |
-| ISRO Satellite Centre (URSC), Bangalore | `VERIFIED_BENGALURU_URBAN` | Known Urban institutional campus |
-| Governors Office (Raj Bhavan), Bangalore | `VERIFIED_BENGALURU_URBAN` | Known Urban institutional campus |
-| DRDO - ADE, Bangalore | `VERIFIED_BENGALURU_URBAN` | Known Urban institutional campus |
-| Doddaballapur, Karnataka | `OUTSIDE_TARGET` | Bengaluru Rural taluk strictly rejected |
-| Nelamangala, Karnataka | `OUTSIDE_TARGET` | Bengaluru Rural taluk strictly rejected |
-| Devanahalli, Karnataka | `OUTSIDE_TARGET` | Bengaluru Rural taluk strictly rejected |
-| Hoskote, Karnataka | `OUTSIDE_TARGET` | Bengaluru Rural taluk strictly rejected |
-| Kanakapura / Ramanagara | `OUTSIDE_TARGET` | Ramanagara district strictly rejected |
-| PIN 562123 (Bengaluru Rural) | `OUTSIDE_TARGET` | PIN range (`561000` - `562999`) rejected |
-| Jodhpur, Rajasthan | `OUTSIDE_TARGET` | Outside state; never defaults to Bangalore |
-| Dehradun, Uttarakhand | `OUTSIDE_TARGET` | Outside state; never defaults to Bangalore |
-| Patna, Bihar | `OUTSIDE_TARGET` | Outside state; never defaults to Bangalore |
-| New Delhi, Delhi | `OUTSIDE_TARGET` | Outside state; never defaults to Bangalore |
-| Bangalore (Bare name, no state, no PIN) | `PARTIALLY_VERIFIED` | Requires manual review; isolated from feed |
-| Ambiguous / Conflicting locations | `AMBIGUOUS` | Placed in review feed |
+**Strict Rejection:**
+- **Bengaluru Rural** (`STATUS_OUTSIDE_TARGET`)
+- **Outside Districts & States** (Jodhpur, Dehradun, Patna, Delhi, etc. -> `STATUS_OUTSIDE_TARGET`)
+- **Bare Ambiguous "Bangalore"** without state or district context -> `PARTIALLY_VERIFIED` (`REVIEW`, isolated from verified feed)
 
 ---
 
-## 2. Segregation of Delivery vs Buyer Office
+## 1. Complete 13-Test Scenario Verification Matrix
 
-A critical procurement requirement is that **the buyer's corporate office location must never dictate delivery eligibility**:
+All 12 prompt scenarios and the alarm removal scenario are automated and verified via pytest in `backend/tests/test_location_and_alarm_removal.py`:
 
-* **Scenario:** A Central Ministry based in New Delhi issues a tender with delivery to an ISRO facility in Bengaluru Urban.
-  - Buyer Location: New Delhi
-  - Delivery Location: Bengaluru Urban
-  - **Verdict:** MATCH (`VERIFIED_BENGALURU_URBAN`)
-* **Scenario:** An organization head-quartered in Bengaluru issues a tender for a field office in Dehradun or Jodhpur.
-  - Buyer Location: Bengaluru
-  - Delivery Location: Jodhpur
-  - **Verdict:** OUTSIDE TARGET (`OUTSIDE_TARGET`)
-
-### Precedence Hierarchy:
-1. **Priority 1:** Verified PDF delivery address extracted from document tables (`pdf_delivery_*`).
-2. **Priority 2:** Structured GeM source delivery location (`delivery_*`).
-3. **Priority 3:** Consignee administrative location (`consignee_*`).
-4. **Excluded:** Buyer office address (`buyer_*`) is never used to determine target matching.
+| Test # | Scenario Description | Input Location / Conditions | Target Status / Expected Behavior | Verification Status |
+|:---:|:---|:---|:---|:---:|
+| **1** | Bengaluru city | `city="Bengaluru", state="KARNATAKA"` | `STATUS_VERIFIED_BENGALURU_CITY` (ACCEPT) | **PASSED** |
+| **2** | Bangalore city | `city="Bangalore", state="KARNATAKA"` or raw text `"Bangalore City, Karnataka"` | `STATUS_VERIFIED_BENGALURU_CITY` (ACCEPT) | **PASSED** |
+| **3** | Bengaluru Urban district | `city="Bengaluru", district="Bengaluru Urban", state="KARNATAKA"` | `STATUS_VERIFIED_BENGALURU_URBAN` (ACCEPT) | **PASSED** |
+| **4** | Bangalore Urban district | `city="Bangalore", district="Bangalore Urban", state="KARNATAKA"` | `STATUS_VERIFIED_BENGALURU_URBAN` (ACCEPT) | **PASSED** |
+| **5** | Bengaluru Rural | `district="Bengaluru Rural"` or towns (Doddaballapur, Nelamangala, Devanahalli, Hoskote) | `STATUS_OUTSIDE_TARGET` (REJECT) | **PASSED** |
+| **6** | Jodhpur | `city="Jodhpur", district="Jodhpur", state="RAJASTHAN"` | `STATUS_OUTSIDE_TARGET` (REJECT) | **PASSED** |
+| **7** | Dehradun | `city="Dehradun", district="Dehradun", state="UTTARAKHAND"` | `STATUS_OUTSIDE_TARGET` (REJECT) | **PASSED** |
+| **8** | Buyer Bangalore + delivery Jodhpur | Buyer: Bengaluru Urban; Delivery: Jodhpur, Rajasthan | `STATUS_OUTSIDE_TARGET` (REJECT) | **PASSED** |
+| **9** | Buyer Jodhpur + delivery Bangalore Urban | Buyer: Jodhpur, Rajasthan; Delivery: Bangalore Urban (Vimanapura / HAL), Karnataka | `STATUS_VERIFIED_BENGALURU_URBAN` (ACCEPT) | **PASSED** |
+| **10** | Ambiguous bare Bangalore | Bare `"Bangalore"` with no state/district or `"Bangalore, district unknown"` | `STATUS_PARTIALLY_VERIFIED` (REVIEW) | **PASSED** |
+| **11** | Missing delivery location | All location fields `None` | `STATUS_UNKNOWN` (ISOLATED) | **PASSED** |
+| **12** | 'All Bengaluru Targets' filter | Query `/bids/?location_target=all_bengaluru` | Returns both city-level and district-level records; excludes outside records | **PASSED** |
+| **13** | Complete Alarm Feature Removal | HTML inspection & API alert acknowledgement | Zero audio oscillators, siren buttons, or autoplay permissions; visual alerts & ack work cleanly | **PASSED** |
 
 ---
 
-## 3. Regression Test Verification
+## 2. Location Source Priority Rules
 
-Automated test cases in `backend/tests/test_bengaluru_urban_matching.py` and `backend/tests/test_audit_and_upgrades.py`:
+Delivery location is evaluated in strict order of authority:
+1. **Priority 1: Verified PDF delivery/consignee address** (`pdf_delivery_*`) extracted from official bid PDF documents.
+2. **Priority 2: Structured source delivery location** (`delivery_*`) provided directly by the GeM portal.
+3. **Priority 3: Consignee administrative location** (`consignee_*`) provided in bid metadata.
+- **Strict Exclusion:** The Buyer office location (`buyer_*`) is strictly excluded from determining delivery eligibility. Buyer HQ in Bangalore with delivery to Jodhpur is rejected; Buyer in New Delhi with delivery to Bengaluru Urban is accepted.
 
-```bash
-pytest backend/tests/test_bengaluru_urban_matching.py
-```
+---
 
-* `test_bengaluru_urban_classification_matrix`: **PASSED**
-* `test_rural_towns_strictly_rejected`: **PASSED**
-* `test_pincode_boundary_validation`: **PASSED**
-* `test_buyer_office_never_determines_delivery`: **PASSED**
-* `test_profile_matcher_strict_bengaluru_urban`: **PASSED**
-* `test_api_scope_and_stats`: **PASSED**
+## 3. Usable Location Filter Options
+
+The UI provides persistent, functional location filters:
+- **`All Bengaluru Targets`** (`all_bengaluru`): Returns all bids verified for either Bengaluru City or Bengaluru Urban District.
+- **`Bengaluru City`** (`bengaluru_city`): Filters specifically for city-level verified bids.
+- **`Bengaluru Urban District`** (`bengaluru_urban`): Filters specifically for district-level verified bids.
+
+Selection behavior:
+- Persisted in browser `localStorage.getItem('gem_location_target')` across page reloads.
+- Triggers live API requests (`/bids/?location_target=...`) and updates table and summary counters instantly.
+- Displayed actively in the Active Filter summary bar chip alongside category selections.
+
+---
+
+## 4. Complete Removal of Alarm Feature
+
+All alarm-related components have been purged:
+- `btnAlarmToggle` removed from top navbar.
+- Web Audio API oscillator, GainNode, audio context, and interval timers completely removed.
+- Siren toggle state and audio autoplay permission requests removed.
+- Visual Match Alert Banner (`activeAlertBanner`) and Modal (`redAlertModal`) preserved with "Dismiss & Acknowledge" button calling `POST /alerts/{id}/ack`.

@@ -17,6 +17,7 @@ TARGET_DISPLAY = "Bengaluru Urban, Karnataka"
 
 # Exact required verification lifecycle statuses
 STATUS_VERIFIED_BENGALURU_URBAN = "VERIFIED_BENGALURU_URBAN"
+STATUS_VERIFIED_BENGALURU_CITY = "VERIFIED_BENGALURU_CITY"
 STATUS_PARTIALLY_VERIFIED = "PARTIALLY_VERIFIED"
 STATUS_AMBIGUOUS = "AMBIGUOUS"
 STATUS_OUTSIDE_TARGET = "OUTSIDE_TARGET"
@@ -400,12 +401,13 @@ def classify_bengaluru_urban(
         return STATUS_VERIFIED_BENGALURU_URBAN, 0.90, "Bengaluru", "Bengaluru Urban", "KARNATAKA"
 
     # 7. Check verified aliases:
-    # "Bengaluru", "Bangalore", "Bangalore Urban", "Bengaluru Urban", "Bengaluru, Karnataka", "Bangalore, Karnataka"
+    # "Bengaluru", "Bangalore", "Bengaluru City", "Bangalore City", "Bengaluru, Karnataka", "Bangalore, Karnataka"
     has_blr = bool(re.search(r"\b(?:bengaluru|bangalore)\b", combined))
     has_karnataka = bool(re.search(r"\bkarnataka\b", combined)) or (state and resolve_state(state) == "KARNATAKA")
 
     if has_blr and has_karnataka:
-        return STATUS_VERIFIED_BENGALURU_URBAN, 0.90, "Bengaluru", "Bengaluru Urban", "KARNATAKA"
+        # City-level verified match (Bengaluru / Bangalore city in Karnataka)
+        return STATUS_VERIFIED_BENGALURU_CITY, 0.90, "Bengaluru", "Bengaluru", "KARNATAKA"
 
     if has_blr and not has_karnataka:
         # Bare 'Bangalore' without verified state context -> PARTIALLY_VERIFIED (REVIEW)
@@ -413,6 +415,10 @@ def classify_bengaluru_urban(
 
     # 8. Everything else is outside target
     return STATUS_OUTSIDE_TARGET, 0.0, city, district, state
+
+
+# Compatibility alias
+classify_bengaluru_target = classify_bengaluru_urban
 
 
 def resolve_effective_bid_delivery_location(
@@ -456,7 +462,7 @@ def resolve_effective_bid_delivery_location(
             raw_text=valid_pdf_addr,
             pincode=pdf_pin,
         )
-        if st in (STATUS_VERIFIED_BENGALURU_URBAN, STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS):
+        if st in (STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY, STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS):
             return st, conf, c, d, s
         elif st == STATUS_OUTSIDE_TARGET and any([pdf_city, pdf_state, pdf_pin]):
             return st, conf, c, d, s
@@ -473,7 +479,7 @@ def resolve_effective_bid_delivery_location(
             state=del_state,
             raw_text=del_addr,
         )
-        if st in (STATUS_VERIFIED_BENGALURU_URBAN, STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS):
+        if st in (STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY, STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS):
             return st, conf, c, d, s
         elif st == STATUS_OUTSIDE_TARGET and any([del_city, del_state]):
             return st, conf, c, d, s
