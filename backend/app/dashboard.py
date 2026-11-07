@@ -158,10 +158,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- Metric 2: Verified Bengaluru Urban Bids in DB -->
+      <!-- Metric 2: Verified Bids in DB -->
       <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800/80 shadow-sm flex items-center justify-between">
         <div>
-          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Bengaluru Urban Bids</p>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Verified Bids</p>
           <p id="statActiveBids" class="text-base sm:text-lg font-black text-emerald-400 font-mono mt-1">-- Verified</p>
           <p id="statTotalBids" class="text-[10px] text-slate-500 mt-0.5">-- Total Tracked</p>
         </div>
@@ -288,43 +288,52 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <!-- Row 1: Lifecycle Tabs & Sorting -->
         <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           
-          <!-- Status & Scope Tabs -->
-          <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs overflow-x-auto">
-            <button onclick="setScopeTab('bengaluru_urban', 'active')" id="tabVerified" class="px-3 py-1.5 rounded-lg font-bold transition bg-emerald-600 text-white shadow flex items-center gap-1.5 whitespace-nowrap">
-              <i class="fa-solid fa-circle-check text-[11px]"></i>
-              <span>Verified Bengaluru Urban</span>
+          <!-- Main Scope Tabs (ONLY TWO TABS) -->
+          <div class="flex items-center gap-1.5 bg-slate-950 p-1.5 rounded-xl border border-slate-800 text-xs">
+            <button onclick="setActiveMainTab('verified')" id="tabVerified" class="px-4 py-2 rounded-lg font-bold transition bg-emerald-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap">
+              <i class="fa-solid fa-circle-check text-xs"></i>
+              <span>Verified Bids</span>
+              <span id="tabVerifiedBadge" class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-700/80 text-emerald-100 font-mono">--</span>
             </button>
-            <button onclick="setScopeTab('review', 'all')" id="tabReview" class="px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white flex items-center gap-1.5 whitespace-nowrap">
-              <i class="fa-solid fa-triangle-exclamation text-[11px] text-amber-400"></i>
+            <button onclick="setActiveMainTab('review')" id="tabReview" class="px-4 py-2 rounded-lg font-bold transition text-slate-400 hover:text-white flex items-center gap-2 whitespace-nowrap">
+              <i class="fa-solid fa-triangle-exclamation text-xs text-amber-400"></i>
               <span>Review Queue</span>
-            </button>
-            <button onclick="setScopeTab('bengaluru_urban', 'closing_soon')" id="tabClosingSoon" class="px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white flex items-center gap-1.5 whitespace-nowrap">
-              <i class="fa-solid fa-hourglass-half text-[11px] text-amber-400"></i>
-              <span>Closing Soon (&lt;24h)</span>
-            </button>
-            <button onclick="setScopeTab('bengaluru_urban', 'expired')" id="tabExpired" class="px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white flex items-center gap-1.5 whitespace-nowrap">
-              <i class="fa-solid fa-archive text-[11px]"></i>
-              <span>Expired Archive</span>
-            </button>
-            <button onclick="setScopeTab('all', 'all')" id="tabAll" class="px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white whitespace-nowrap">
-              All Ingested Records
+              <span id="tabReviewBadge" class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-amber-300 font-mono">--</span>
             </button>
           </div>
 
-          <!-- Sorting Dropdown -->
-          <div class="flex items-center gap-2">
-            <label for="sortBySelect" class="text-xs font-semibold text-slate-400 whitespace-nowrap">
-              <i class="fa-solid fa-arrow-down-wide-short mr-1"></i> Sort:
-            </label>
-            <select id="sortBySelect" onchange="onSortChange()" class="px-3 py-1.5 rounded-xl bg-slate-950 text-slate-200 border border-slate-800 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500">
-              <option value="closing_soonest" selected>Closing Soonest (Default)</option>
-              <option value="latest_published">Latest Published First</option>
-              <option value="oldest_published">Oldest Published First</option>
-              <option value="closing_latest">Closing Latest</option>
-              <option value="newly_added">Newly Ingested First</option>
-              <option value="highest_value">Highest Estimated Value</option>
-              <option value="lowest_value">Lowest Estimated Value</option>
-            </select>
+          <!-- Controls: Status Filter & Sorting -->
+          <div class="flex flex-wrap items-center gap-3">
+            
+            <!-- Compact Status Filter Dropdown -->
+            <div class="flex items-center gap-2">
+              <label for="statusSelect" class="text-xs font-semibold text-slate-400 whitespace-nowrap">
+                <i class="fa-solid fa-filter text-slate-500 mr-1"></i> Status:
+              </label>
+              <select id="statusSelect" onchange="onStatusFilterChange()" class="px-2.5 py-1.5 rounded-xl bg-slate-950 text-slate-200 border border-slate-800 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer">
+                <option value="active" selected>All Active</option>
+                <option value="closing_soon">Closing Soon (&lt;24h)</option>
+                <option value="expired">Expired</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+
+            <!-- Sorting Dropdown -->
+            <div class="flex items-center gap-2">
+              <label for="sortBySelect" class="text-xs font-semibold text-slate-400 whitespace-nowrap">
+                <i class="fa-solid fa-arrow-down-wide-short mr-1 text-slate-500"></i> Sort:
+              </label>
+              <select id="sortBySelect" onchange="onSortChange()" class="px-2.5 py-1.5 rounded-xl bg-slate-950 text-slate-200 border border-slate-800 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer">
+                <option value="closing_soonest" selected>Closing Soonest (Default)</option>
+                <option value="latest_published">Latest Published First</option>
+                <option value="oldest_published">Oldest Published First</option>
+                <option value="closing_latest">Closing Latest</option>
+                <option value="newly_added">Newly Ingested First</option>
+                <option value="highest_value">Highest Estimated Value</option>
+                <option value="lowest_value">Lowest Estimated Value</option>
+              </select>
+            </div>
+
           </div>
 
         </div>
@@ -562,8 +571,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     ];
 
     // Global State
-    let currentScope = 'bengaluru_urban'; // 'bengaluru_urban' (default), 'review', 'all'
-    let currentFeedStatus = 'active'; // 'active', 'closing_soon', 'expired', 'all'
+    let currentScope = 'verified'; // 'verified' (default: Verified Bids), 'review' (Review Queue)
+    let currentFeedStatus = 'active'; // 'active', 'closing_soon', 'expired', 'cancelled'
     let currentSortBy = 'closing_soonest';
     let currentLocationTarget = 'all_bengaluru'; // 'all_bengaluru', 'bengaluru_city', 'bengaluru_urban'
     try {
@@ -776,6 +785,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             document.getElementById('statReviewCount').textContent = `${s.review_count || 0} Review`;
           }
           document.getElementById('statExpiredBids').textContent = `${s.expired_bids} Expired Excluded`;
+          if (document.getElementById('tabVerifiedBadge')) {
+            document.getElementById('tabVerifiedBadge').textContent = verifiedCount;
+          }
+          if (document.getElementById('tabReviewBadge')) {
+            document.getElementById('tabReviewBadge').textContent = s.review_count || 0;
+          }
         }
 
         // Exact Alert Stats
@@ -1205,33 +1220,55 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       currentModalBid = null;
     }
 
-    // --- INTERACTION HANDLERS ---
+    // --- MAIN NAVIGATION TABS (VERIFIED BIDS vs REVIEW QUEUE) ---
+    function setActiveMainTab(tab) {
+      currentScope = tab; // 'verified' or 'review'
+      updateTabVisuals();
+      loadDashboardData();
+    }
+
+    function onStatusFilterChange() {
+      const sel = document.getElementById('statusSelect');
+      if (sel) {
+        currentFeedStatus = sel.value; // 'active', 'closing_soon', 'expired', 'cancelled'
+      }
+      loadDashboardData();
+    }
+
+    function updateTabVisuals() {
+      const btnVerified = document.getElementById('tabVerified');
+      const btnReview = document.getElementById('tabReview');
+      if (currentScope === 'review') {
+        if (btnReview) btnReview.className = "px-4 py-2 rounded-lg font-bold transition bg-amber-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap";
+        if (btnVerified) btnVerified.className = "px-4 py-2 rounded-lg font-bold transition text-slate-400 hover:text-white flex items-center gap-2 whitespace-nowrap";
+      } else {
+        currentScope = 'verified';
+        if (btnVerified) btnVerified.className = "px-4 py-2 rounded-lg font-bold transition bg-emerald-600 text-white shadow-md flex items-center gap-2 whitespace-nowrap";
+        if (btnReview) btnReview.className = "px-4 py-2 rounded-lg font-bold transition text-slate-400 hover:text-white flex items-center gap-2 whitespace-nowrap";
+      }
+    }
+
+    // Compatibility Helpers for existing workflows & tests
     function setScopeTab(scope, status) {
-      currentScope = scope;
-      currentFeedStatus = status;
-
-      const tabs = [
-        { id: 'tabVerified', scope: 'bengaluru_urban', status: 'active', activeClass: 'bg-emerald-600 text-white shadow' },
-        { id: 'tabReview', scope: 'review', status: 'all', activeClass: 'bg-amber-600 text-white shadow' },
-        { id: 'tabClosingSoon', scope: 'bengaluru_urban', status: 'closing_soon', activeClass: 'bg-blue-600 text-white shadow' },
-        { id: 'tabExpired', scope: 'bengaluru_urban', status: 'expired', activeClass: 'bg-slate-700 text-white shadow' },
-        { id: 'tabAll', scope: 'all', status: 'all', activeClass: 'bg-blue-600 text-white shadow' },
-      ];
-
-      tabs.forEach(t => {
-        const btn = document.getElementById(t.id);
-        if (!btn) return;
-        if (t.scope === scope && t.status === status) {
-          btn.className = `px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 whitespace-nowrap ${t.activeClass}`;
-        } else {
-          btn.className = "px-3 py-1.5 rounded-lg font-bold transition text-slate-400 hover:text-white flex items-center gap-1.5 whitespace-nowrap";
-        }
-      });
+      if (scope === 'review') {
+        currentScope = 'review';
+      } else {
+        currentScope = 'verified';
+      }
+      if (status) {
+        currentFeedStatus = status;
+        const sel = document.getElementById('statusSelect');
+        if (sel) sel.value = status;
+      }
+      updateTabVisuals();
       loadDashboardData();
     }
 
     function setFeedStatus(status) {
-      setScopeTab(currentScope, status);
+      currentFeedStatus = status;
+      const sel = document.getElementById('statusSelect');
+      if (sel) sel.value = status;
+      loadDashboardData();
     }
 
     function onSortChange() {
@@ -1302,6 +1339,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     document.addEventListener('DOMContentLoaded', () => {
       const locSelect = document.getElementById('locationTargetSelect');
       if (locSelect) locSelect.value = currentLocationTarget;
+      const statSelect = document.getElementById('statusSelect');
+      if (statSelect) statSelect.value = currentFeedStatus;
+      updateTabVisuals();
       renderCategoryCheckboxes();
       loadDashboardData();
     });

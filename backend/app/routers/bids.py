@@ -266,6 +266,10 @@ def list_bids(
     # 4. Target Location Scope Filter
     if target_status:
         q = q.filter(Bid.target_location_status == target_status.strip().upper())
+    elif scope and scope.lower().strip() in ("review", "partially_verified", "ambiguous", "unverified"):
+        q = q.filter(Bid.target_location_status.in_([STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS, STATUS_UNKNOWN]))
+    elif scope and scope.lower().strip() in ("outside", "outside_target"):
+        q = q.filter(Bid.target_location_status == STATUS_OUTSIDE_TARGET)
     elif location_target:
         loc_tgt = location_target.lower().strip()
         if loc_tgt in ("all_bengaluru", "all_bengaluru_targets", "bengaluru_all"):
@@ -287,10 +291,6 @@ def list_bids(
             q = q.filter(Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY)
         elif scope_clean in ("all_bengaluru", "bengaluru", "verified", "target", "matching"):
             q = q.filter(Bid.target_location_status.in_([STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY]))
-        elif scope_clean in ("review", "partially_verified", "ambiguous", "unverified"):
-            q = q.filter(Bid.target_location_status.in_([STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS, STATUS_UNKNOWN]))
-        elif scope_clean in ("outside", "outside_target"):
-            q = q.filter(Bid.target_location_status == STATUS_OUTSIDE_TARGET)
 
     # 5. Keyword / Legacy Category / Dept Filters
     if keyword:
