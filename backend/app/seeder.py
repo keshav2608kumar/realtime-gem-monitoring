@@ -40,7 +40,41 @@ def seed_initial_data(db: Session):
             db.refresh(profile)
             logger.info("Auto-seeded Profile 1: Bangalore - Toner & Printer")
 
-        # 2. Load and upsert baseline bids
+        # 2. Purge obsolete synthetic bids and mismatched records from DB
+        OBSOLETE_SYNTHETIC_BIDS = [
+            "GEM/2026/B/8219901",
+            "GEM/2026/B/8219902",
+            "GEM/2026/B/8219903",
+            "GEM/2026/B/8095785",
+            "GEM/2026/B/8192651",
+            "GEM/2026/B/8192076",
+            "GEM/2026/B/8186128",
+            "GEM/2026/B/8196969",
+            "GEM/2026/B/8211130",
+            "GEM/2026/B/8117647",
+            "GEM/2026/B/8210645",
+            "GEM/2026/B/8194494",
+            "GEM/2026/B/8211464",
+            "GEM/2026/B/8194412",
+            "GEM/2026/B/8192847",
+            "GEM/2026/B/8203999",
+        ]
+        obsolete_bids = db.query(Bid).filter(
+            or_(
+                Bid.bid_number.in_(OBSOLETE_SYNTHETIC_BIDS),
+                Bid.synchronization_status == "PDF_BID_MISMATCH",
+                Bid.pdf_verification_status == "PDF_BID_MISMATCH"
+            )
+        ).all()
+        if obsolete_bids:
+            obsolete_ids = [b.id for b in obsolete_bids]
+            db.query(Alert).filter(Alert.bid_id.in_(obsolete_ids)).delete(synchronize_session=False)
+            for ob in obsolete_bids:
+                db.delete(ob)
+            db.commit()
+            logger.info(f"Purged {len(obsolete_bids)} obsolete synthetic bids and associated alerts")
+
+        # 3. Load and upsert verified baseline bids
         json_path = os.path.join(os.path.dirname(__file__), "baseline_bids.json")
         if os.path.exists(json_path):
             with open(json_path, "r", encoding="utf-8") as f:
