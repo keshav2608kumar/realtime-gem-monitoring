@@ -66,6 +66,31 @@ class Bid(Base):
     pdf_processed_at = Column(DateTime(timezone=True), nullable=True)
     pdf_doc_hash = Column(String(64), nullable=True)
 
+    # ─── Strict Document-to-Bid Synchronization & Provenance Fields ───
+    official_source_url = Column(String(500), nullable=True)
+    original_pdf_url = Column(String(500), nullable=True)
+    original_pdf_checksum = Column(String(64), nullable=True)  # SHA-256
+    document_version = Column(String(50), default="1.0")
+    original_publication_date = Column(DateTime(timezone=True), nullable=True)
+    latest_revised_deadline = Column(DateTime(timezone=True), nullable=True)
+    corrigendum_reference = Column(String(200), nullable=True)
+    corrigendum_date = Column(DateTime(timezone=True), nullable=True)
+    latest_verified_status = Column(String(50), default="ACTIVE")
+    raw_extracted_text = Column(Text, nullable=True)
+    extracted_category = Column(Text, nullable=True)
+    extracted_consignee_name = Column(String(200), nullable=True)
+    extracted_delivery_address = Column(Text, nullable=True)
+    extracted_city = Column(String(100), nullable=True)
+    extracted_district = Column(String(100), nullable=True)
+    extracted_state = Column(String(100), nullable=True)
+    extracted_pincode = Column(String(20), nullable=True)
+    pdf_bid_number = Column(String(100), nullable=True)
+    pdf_details_page_number = Column(Integer, nullable=True)
+    extraction_timestamp = Column(DateTime(timezone=True), nullable=True)
+    verification_timestamp = Column(DateTime(timezone=True), nullable=True)
+    data_confidence = Column(Float, nullable=True)
+    synchronization_status = Column(String(50), default="PENDING", index=True)  # SYNCHRONIZED, DATA_MISMATCH, FAILED, PENDING, PDF_UNAVAILABLE
+
     raw_location_text = Column(Text, nullable=True)
     location_verification_status = Column(String(50), default="UNKNOWN")  # VERIFIED, NORMALIZED, AMBIGUOUS, UNKNOWN
     target_location_status = Column(String(50), default="UNKNOWN", index=True)  # VERIFIED_BENGALURU_URBAN, PARTIALLY_VERIFIED, AMBIGUOUS, OUTSIDE_TARGET, UNKNOWN

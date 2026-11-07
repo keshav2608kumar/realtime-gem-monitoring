@@ -110,6 +110,22 @@ def seed_initial_data(db: Session):
                         existing.pdf_extraction_method = b.get("pdf_extraction_method", "PDF_TEXT")
                         existing.pdf_confidence_score = b.get("pdf_confidence_score")
                         existing.pdf_verification_status = b.get("pdf_verification_status", "UNKNOWN")
+                    existing.official_source_url = b.get("bid_url")
+                    existing.original_pdf_url = b.get("bid_url")
+                    existing.pdf_bid_number = b["bid_number"]
+                    existing.extracted_category = b.get("category_name")
+                    existing.extracted_delivery_address = b.get("pdf_delivery_address")
+                    existing.extracted_city = b.get("pdf_delivery_city")
+                    existing.extracted_district = b.get("pdf_delivery_district")
+                    existing.extracted_state = b.get("pdf_delivery_state")
+                    existing.extracted_pincode = b.get("pdf_delivery_pincode")
+                    existing.extracted_consignee_name = b.get("pdf_delivery_consignee")
+                    existing.original_publication_date = start_dt
+                    existing.latest_revised_deadline = rev_end_dt
+                    existing.corrigendum_reference = corr_details
+                    existing.latest_verified_status = bid_status
+                    existing.data_confidence = b.get("pdf_confidence_score") or 0.9
+                    existing.synchronization_status = "SYNCHRONIZED" if b.get("pdf_verification_status") == "VERIFIED" else "PENDING"
                 else:
                     new_bid = Bid(
                         gem_bid_id=b["gem_bid_id"],
@@ -153,6 +169,22 @@ def seed_initial_data(db: Session):
                         pdf_extraction_method=b.get("pdf_extraction_method", "PDF_TEXT"),
                         pdf_confidence_score=b.get("pdf_confidence_score"),
                         pdf_verification_status=b.get("pdf_verification_status", "UNKNOWN"),
+                        official_source_url=b.get("bid_url"),
+                        original_pdf_url=b.get("bid_url"),
+                        pdf_bid_number=b["bid_number"],
+                        extracted_category=b.get("category_name"),
+                        extracted_delivery_address=b.get("pdf_delivery_address"),
+                        extracted_city=b.get("pdf_delivery_city"),
+                        extracted_district=b.get("pdf_delivery_district"),
+                        extracted_state=b.get("pdf_delivery_state"),
+                        extracted_pincode=b.get("pdf_delivery_pincode"),
+                        extracted_consignee_name=b.get("pdf_delivery_consignee"),
+                        original_publication_date=start_dt,
+                        latest_revised_deadline=rev_end_dt,
+                        corrigendum_reference=corr_details,
+                        latest_verified_status=bid_status,
+                        data_confidence=b.get("pdf_confidence_score") or 0.9,
+                        synchronization_status="SYNCHRONIZED" if b.get("pdf_verification_status") == "VERIFIED" else "PENDING",
                     )
                     db.add(new_bid)
 

@@ -119,6 +119,11 @@ def normalize_bid(raw: RawBid) -> Optional[BidCreate]:
             data_source_classification="LIVE_VERIFIED",
             raw_source_record=raw_json_str,
             source_retrieval_time=datetime.now(timezone.utc),
+            official_source_url=bid_url,
+            original_pdf_url=bid_url,
+            synchronization_status="PENDING",
+            original_end_date=end_date,
+            original_publication_date=start_date,
             bid_url=bid_url,
             cat_id=raw.get("b_cat_id"),
         )

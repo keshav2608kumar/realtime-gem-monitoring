@@ -1130,19 +1130,40 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       const badge = document.getElementById('detailPdfStatusBadge');
       const content = document.getElementById('detailPdfContent');
 
+      const syncStatus = bid.synchronization_status || 'PENDING';
       const status = bid.pdf_verification_status || 'UNKNOWN';
-      badge.textContent = status;
 
-      if (status === 'VERIFIED') {
+      if (syncStatus === 'DATA_MISMATCH') {
+        badge.textContent = 'DATA_MISMATCH';
+        badge.className = "px-2.5 py-0.5 rounded text-[10px] font-black uppercase bg-red-500/20 text-red-300 border border-red-500/40";
+      } else if (status === 'VERIFIED') {
+        badge.textContent = 'VERIFIED';
         badge.className = "px-2.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
       } else if (status === 'PARTIALLY_VERIFIED') {
+        badge.textContent = 'PARTIALLY_VERIFIED';
         badge.className = "px-2.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30";
       } else {
+        badge.textContent = status;
         badge.className = "px-2.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700";
+      }
+
+      let mismatchHtml = '';
+      if (syncStatus === 'DATA_MISMATCH') {
+        mismatchHtml = `
+          <div class="p-3 rounded-xl bg-red-950/40 border border-red-500/40 text-red-200 text-xs space-y-1">
+            <div class="font-bold flex items-center gap-1.5 text-red-300">
+              <i class="fa-solid fa-triangle-exclamation text-red-400"></i> DOCUMENT DATA MISMATCH
+            </div>
+            <p class="text-[11px] text-red-200">
+              Document Bid Number (${escapeHtml(bid.pdf_bid_number || 'Unknown')}) does not match record (${escapeHtml(bid.bid_number)}). Quarantined in Review Queue.
+            </p>
+          </div>
+        `;
       }
 
       if (bid.pdf_delivery_address && status !== 'UNKNOWN' && status !== 'PDF_UNAVAILABLE') {
         content.innerHTML = `
+          ${mismatchHtml}
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2 border-b border-slate-800/60">
             <div>
               <span class="text-[10px] uppercase font-bold text-slate-500 block">Consignee / Reporting Officer</span>
@@ -1175,9 +1196,15 @@ DASHBOARD_HTML = """<!DOCTYPE html>
               <span class="font-bold text-blue-400">Page ${escapeHtml(bid.pdf_page_number || 'Final')}</span>
             </div>
           </div>
+          <div class="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+            <span>Doc Version: ${escapeHtml(bid.document_version || '1.0')}</span>
+            <span>Checksum: ${bid.original_pdf_checksum ? escapeHtml(bid.original_pdf_checksum.substring(0, 12)) + '...' : 'Verified'}</span>
+            <span class="font-sans font-bold uppercase ${syncStatus === 'DATA_MISMATCH' ? 'text-red-400' : 'text-emerald-400'}">${escapeHtml(syncStatus)}</span>
+          </div>
         `;
       } else {
         content.innerHTML = `
+          ${mismatchHtml}
           <div class="py-4 text-center text-slate-400 space-y-1">
             <i class="fa-solid fa-file-circle-question text-2xl text-slate-600 block mb-1"></i>
             <p class="font-bold text-slate-300">Delivery address could not be verified from the available document.</p>

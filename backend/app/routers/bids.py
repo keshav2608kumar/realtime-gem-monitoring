@@ -108,6 +108,29 @@ def _enrich_bid(b: Bid, now_utc: Optional[datetime] = None) -> BidOut:
         location_verification_status=b.location_verification_status or loc.confidence,
         target_location_status=t_status or "UNKNOWN",
         data_source_classification=b.data_source_classification or "LIVE_VERIFIED",
+        official_source_url=b.official_source_url or b.bid_url,
+        original_pdf_url=b.original_pdf_url or b.bid_url,
+        original_pdf_checksum=b.original_pdf_checksum or b.pdf_doc_hash,
+        document_version=b.document_version or "1.0",
+        original_publication_date=b.original_publication_date or b.start_date,
+        latest_revised_deadline=b.revised_end_date or b.latest_revised_deadline,
+        corrigendum_reference=b.corrigendum_reference or b.corrigendum_details,
+        corrigendum_date=b.corrigendum_date,
+        latest_verified_status=current_status,
+        raw_extracted_text=b.raw_extracted_text,
+        extracted_category=b.extracted_category or b.category_name,
+        extracted_consignee_name=b.extracted_consignee_name or b.pdf_delivery_consignee,
+        extracted_delivery_address=b.extracted_delivery_address or b.pdf_delivery_address,
+        extracted_city=b.extracted_city or b.pdf_delivery_city,
+        extracted_district=b.extracted_district or b.pdf_delivery_district,
+        extracted_state=b.extracted_state or b.pdf_delivery_state,
+        extracted_pincode=b.extracted_pincode or b.pdf_delivery_pincode,
+        pdf_bid_number=b.pdf_bid_number or b.bid_number,
+        pdf_details_page_number=b.pdf_details_page_number or 1,
+        extraction_timestamp=b.extraction_timestamp or b.pdf_processed_at,
+        verification_timestamp=b.verification_timestamp,
+        data_confidence=b.data_confidence or b.pdf_confidence_score,
+        synchronization_status=b.synchronization_status or "SYNCHRONIZED",
         bid_url=b.bid_url,
         cat_id=b.cat_id,
         first_seen_at=b.first_seen_at or now,
@@ -267,30 +290,58 @@ def list_bids(
     if target_status:
         q = q.filter(Bid.target_location_status == target_status.strip().upper())
     elif scope and scope.lower().strip() in ("review", "partially_verified", "ambiguous", "unverified"):
-        q = q.filter(Bid.target_location_status.in_([STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS, STATUS_UNKNOWN]))
+        q = q.filter(
+            or_(
+                Bid.target_location_status.in_([STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS, STATUS_UNKNOWN]),
+                Bid.synchronization_status == "DATA_MISMATCH"
+            )
+        )
     elif scope and scope.lower().strip() in ("outside", "outside_target"):
         q = q.filter(Bid.target_location_status == STATUS_OUTSIDE_TARGET)
     elif location_target:
         loc_tgt = location_target.lower().strip()
         if loc_tgt in ("all_bengaluru", "all_bengaluru_targets", "bengaluru_all"):
-            q = q.filter(Bid.target_location_status.in_([STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY]))
+            q = q.filter(
+                Bid.target_location_status.in_([STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY]),
+                or_(Bid.synchronization_status == None, Bid.synchronization_status != "DATA_MISMATCH")
+            )
         elif loc_tgt in ("bengaluru_city", "bangalore_city", "city"):
-            q = q.filter(Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY)
+            q = q.filter(
+                Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY,
+                or_(Bid.synchronization_status == None, Bid.synchronization_status != "DATA_MISMATCH")
+            )
         elif loc_tgt in ("bengaluru_urban", "bangalore_urban", "urban", "district"):
-            q = q.filter(Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN)
+            q = q.filter(
+                Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN,
+                or_(Bid.synchronization_status == None, Bid.synchronization_status != "DATA_MISMATCH")
+            )
         elif loc_tgt in ("review", "partially_verified", "ambiguous", "unverified"):
-            q = q.filter(Bid.target_location_status.in_([STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS, STATUS_UNKNOWN]))
+            q = q.filter(
+                or_(
+                    Bid.target_location_status.in_([STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS, STATUS_UNKNOWN]),
+                    Bid.synchronization_status == "DATA_MISMATCH"
+                )
+            )
         elif loc_tgt in ("outside", "outside_target"):
             q = q.filter(Bid.target_location_status == STATUS_OUTSIDE_TARGET)
         # 'all' applies no target location filtering
     elif scope:
         scope_clean = scope.lower().strip()
         if scope_clean in ("bengaluru_urban", "bangalore_urban"):
-            q = q.filter(Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN)
+            q = q.filter(
+                Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN,
+                or_(Bid.synchronization_status == None, Bid.synchronization_status != "DATA_MISMATCH")
+            )
         elif scope_clean in ("bengaluru_city", "bangalore_city"):
-            q = q.filter(Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY)
+            q = q.filter(
+                Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY,
+                or_(Bid.synchronization_status == None, Bid.synchronization_status != "DATA_MISMATCH")
+            )
         elif scope_clean in ("all_bengaluru", "bengaluru", "verified", "target", "matching"):
-            q = q.filter(Bid.target_location_status.in_([STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY]))
+            q = q.filter(
+                Bid.target_location_status.in_([STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY]),
+                or_(Bid.synchronization_status == None, Bid.synchronization_status != "DATA_MISMATCH")
+            )
 
     # 5. Keyword / Legacy Category / Dept Filters
     if keyword:
@@ -449,6 +500,11 @@ def batch_sync_bids(bids: List[BidCreate], db: Session = Depends(get_db)):
             dump["target_location_status"] = loc_st
             dump["category_key"] = ckey
             dump["category_mapping_status"] = cstatus
+            if bid_data.bid_url:
+                dump["official_source_url"] = bid_data.bid_url
+                dump["original_pdf_url"] = bid_data.bid_url
+            if not dump.get("synchronization_status"):
+                dump["synchronization_status"] = "PENDING"
             db_bid = Bid(**dump)
             db.add(db_bid)
             db.flush()
@@ -516,37 +572,19 @@ def list_target_categories():
 @router.post("/{bid_id}/extract-pdf", response_model=BidOut)
 def trigger_pdf_extraction(bid_id: int, db: Session = Depends(get_db)):
     """
-    Extract delivery/consignee address from the final pages of the official GeM Bid PDF.
+    Extract and synchronize delivery/consignee address, bid number, dates,
+    and category from the official GeM Bid PDF.
     Updates database record with structured address, PIN code, and verification status.
     """
     b = db.query(Bid).filter(Bid.id == bid_id).first()
     if not b:
         raise HTTPException(status_code=404, detail="Bid not found")
 
-    if not b.bid_url:
+    if not b.bid_url and not b.original_pdf_url:
         raise HTTPException(status_code=400, detail="No official PDF URL available for this bid")
 
-    res = extract_location_from_pdf(pdf_url=b.bid_url)
-    b.pdf_delivery_address = res.full_address
-    b.pdf_delivery_city = res.city
-    b.pdf_delivery_district = res.district
-    b.pdf_delivery_state = res.state
-    b.pdf_delivery_pincode = res.pincode
-    b.pdf_delivery_consignee = res.consignee_name
-    b.pdf_delivery_org = res.organization
-    b.pdf_page_number = res.page_number
-    b.pdf_extraction_method = res.extraction_method
-    b.pdf_confidence_score = res.confidence_score
-    b.pdf_verification_status = res.verification_status
-    b.pdf_processed_at = datetime.now(timezone.utc)
-    b.pdf_doc_hash = res.doc_hash
-
-    # Re-evaluate target location status with newly extracted PDF delivery details
-    new_status, _, _, _, _ = resolve_effective_bid_delivery_location(b)
-    b.target_location_status = new_status
-
-    db.commit()
-    db.refresh(b)
+    from app.services.pdf_synchronizer import synchronize_bid_with_pdf
+    synchronize_bid_with_pdf(b, force=True, db=db)
     return _enrich_bid(b)
 
 

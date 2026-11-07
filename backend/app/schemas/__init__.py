@@ -66,6 +66,31 @@ class BidBase(BaseModel):
     target_location_status: Optional[str] = "UNKNOWN"
     data_source_classification: Optional[str] = "LIVE_VERIFIED"
 
+    # Strict Document-to-Bid Synchronization & Provenance Fields
+    official_source_url: Optional[str] = None
+    original_pdf_url: Optional[str] = None
+    original_pdf_checksum: Optional[str] = None
+    document_version: Optional[str] = "1.0"
+    original_publication_date: Optional[datetime] = None
+    latest_revised_deadline: Optional[datetime] = None
+    corrigendum_reference: Optional[str] = None
+    corrigendum_date: Optional[datetime] = None
+    latest_verified_status: Optional[str] = "ACTIVE"
+    raw_extracted_text: Optional[str] = None
+    extracted_category: Optional[str] = None
+    extracted_consignee_name: Optional[str] = None
+    extracted_delivery_address: Optional[str] = None
+    extracted_city: Optional[str] = None
+    extracted_district: Optional[str] = None
+    extracted_state: Optional[str] = None
+    extracted_pincode: Optional[str] = None
+    pdf_bid_number: Optional[str] = None
+    pdf_details_page_number: Optional[int] = None
+    extraction_timestamp: Optional[datetime] = None
+    verification_timestamp: Optional[datetime] = None
+    data_confidence: Optional[float] = None
+    synchronization_status: Optional[str] = "PENDING"
+
     bid_url: Optional[str] = None
     cat_id: Optional[str] = None
 
