@@ -55,7 +55,7 @@ def batch_sync_bids(bids: List[BidCreate], db: Session = Depends(get_db)):
         existing = db.query(Bid).filter(Bid.gem_bid_id == bid_data.gem_bid_id).first()
         if existing:
             db_bid = existing
-            if bid_data.end_date and not existing.end_date:
+            if bid_data.end_date:
                 existing.end_date = bid_data.end_date
             if bid_data.category_name and existing.category_name != bid_data.category_name:
                 existing.category_name = bid_data.category_name

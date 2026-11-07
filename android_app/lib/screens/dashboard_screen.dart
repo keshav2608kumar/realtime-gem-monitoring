@@ -61,12 +61,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  bool _matchesKeyword(String category, String kw) {
+    if (kw.isEmpty) return true;
+    final text = category.toLowerCase();
+    if (kw == 'printer') return RegExp(r'\bprinter', caseSensitive: false).hasMatch(text);
+    if (kw == 'toner') return RegExp(r'\btoner', caseSensitive: false).hasMatch(text);
+    if (kw == 'cartridge' || kw == 'catridge') return RegExp(r'\bc(?:a|ar)tridge', caseSensitive: false).hasMatch(text);
+    if (kw == 'ink') return RegExp(r'\bink(?:jet|s)?\b', caseSensitive: false).hasMatch(text);
+    return text.contains(kw.toLowerCase());
+  }
+
+  bool _isTargetMatched(String category) {
+    final text = category.toLowerCase();
+    return RegExp(r'\b(printer|toner|c(?:a|ar)tridge|ink(?:jet|s)?)\b', caseSensitive: false).hasMatch(text);
+  }
+
+  int _countFor(String kw) {
+    return _allBids.where((b) => _matchesKeyword(b.categoryName, kw)).length;
+  }
+
   void _applyFilter() {
     final query = _searchController.text.toLowerCase().trim();
     setState(() {
       _filteredBids = _allBids.where((b) {
         final cat = b.categoryName.toLowerCase();
-        final matchesFilter = _activeFilter.isEmpty || cat.contains(_activeFilter);
+        final matchesFilter = _matchesKeyword(b.categoryName, _activeFilter);
         final matchesQuery = query.isEmpty ||
             b.bidNumber.toLowerCase().contains(query) ||
             cat.contains(query) ||
@@ -447,11 +466,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildCategoryFilterChips() {
     final filters = [
-      {'label': 'All', 'kw': ''},
-      {'label': 'Printers', 'kw': 'printer'},
-      {'label': 'Toners', 'kw': 'toner'},
-      {'label': 'Cartridges', 'kw': 'cartridge'},
-      {'label': 'Ink', 'kw': 'ink'},
+      {'label': 'All (${_allBids.length})', 'kw': ''},
+      {'label': 'Printers (${_countFor('printer')})', 'kw': 'printer'},
+      {'label': 'Toners (${_countFor('toner')})', 'kw': 'toner'},
+      {'label': 'Cartridges (${_countFor('cartridge')})', 'kw': 'cartridge'},
+      {'label': 'Ink (${_countFor('ink')})', 'kw': 'ink'},
     ];
 
     return SingleChildScrollView(
@@ -519,11 +538,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildTenderCard(BidModel bid) {
-    final catLower = bid.categoryName.toLowerCase();
-    final isMatched = catLower.contains('printer') ||
-        catLower.contains('toner') ||
-        catLower.contains('cartridge') ||
-        catLower.contains('ink');
+    final isMatched = _isTargetMatched(bid.categoryName);
 
     final dateStr = bid.endDate != null
         ? DateFormat('dd MMM yyyy, hh:mm a').format(bid.endDate!.toLocal())

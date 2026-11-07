@@ -232,11 +232,26 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         </div>
 
         <div class="flex items-center space-x-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-          <button onclick="setKeywordFilter('')" class="filter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-red-600 text-white shadow-md shadow-red-600/30" data-kw="">All</button>
-          <button onclick="setKeywordFilter('printer')" class="filter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700" data-kw="printer">Printers</button>
-          <button onclick="setKeywordFilter('toner')" class="filter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700" data-kw="toner">Toners</button>
-          <button onclick="setKeywordFilter('cartridge')" class="filter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700" data-kw="cartridge">Cartridges</button>
-          <button onclick="setKeywordFilter('ink')" class="filter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700" data-kw="ink">Ink</button>
+          <button onclick="setKeywordFilter('')" class="filter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-red-600 text-white shadow-md shadow-red-600/30 flex items-center gap-1.5" data-kw="">
+            <span>All</span>
+            <span id="badgeCountAll" class="px-1.5 py-0.2 rounded-full text-[10px] bg-black/40 text-slate-200">0</span>
+          </button>
+          <button onclick="setKeywordFilter('printer')" class="filter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center gap-1.5" data-kw="printer">
+            <span>Printers</span>
+            <span id="badgeCountPrinter" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-700/80 text-amber-300">0</span>
+          </button>
+          <button onclick="setKeywordFilter('toner')" class="filter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center gap-1.5" data-kw="toner">
+            <span>Toners</span>
+            <span id="badgeCountToner" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-700/80 text-amber-300">0</span>
+          </button>
+          <button onclick="setKeywordFilter('cartridge')" class="filter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center gap-1.5" data-kw="cartridge">
+            <span>Cartridges</span>
+            <span id="badgeCountCartridge" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-700/80 text-amber-300">0</span>
+          </button>
+          <button onclick="setKeywordFilter('ink')" class="filter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center gap-1.5" data-kw="ink">
+            <span>Ink</span>
+            <span id="badgeCountInk" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-700/80 text-amber-300">0</span>
+          </button>
         </div>
       </div>
 
@@ -549,6 +564,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         // 4. Bids (Preserves User Filter Synchronously!)
         if (bRes.status === 'fulfilled' && bRes.value) {
           allBids = bRes.value;
+          updateCategoryCounts();
           filterBids();
         } else {
           // Fallback if bids failed
@@ -613,7 +629,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         const cat = escapeHtml(b.category_name);
         const city = escapeHtml(b.consignee_city || 'Bangalore');
         const state = escapeHtml(b.consignee_state || 'KARNATAKA');
-        const isMatched = /printer|toner|cartridge|ink/i.test(cat);
+        const isMatched = /\b(printer|toner|c(a|ar)tridge|ink(jet|s)?)\b/i.test(cat);
 
         const endFormatted = b.end_date 
           ? new Date(b.end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -700,14 +716,23 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
     async function toggleProfileActive(id, newStatus) {
       try {
-        const res = await fetch(`/profiles/${id}`, {
-          method: 'PUT',
+        let res = await fetch(`/profiles/${id}`, {
+          method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ is_active: newStatus })
         });
+        if (!res.ok) {
+          res = await fetch(`/profiles/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active: newStatus })
+          });
+        }
         if (res.ok) {
           showToast(`Rule status changed to ${newStatus ? 'ACTIVE' : 'PAUSED'}.`);
           loadAllData();
+        } else {
+          alert('Failed to update status: HTTP ' + res.status);
         }
       } catch (e) {
         alert('Failed to update status: ' + e);
@@ -773,12 +798,18 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
       try {
         const url = id ? `/profiles/${id}` : '/profiles/';
-        const method = id ? 'PUT' : 'POST';
-        const res = await fetch(url, {
-          method,
+        let res = await fetch(url, {
+          method: id ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
+        if (id && !res.ok) {
+          res = await fetch(url, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
 
         if (res.ok) {
           closeProfileModal();
@@ -802,13 +833,37 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       }
     }
 
+    function matchesKeywordFilter(categoryName, kw) {
+      if (!categoryName) return false;
+      const text = categoryName.toLowerCase();
+      if (kw === 'printer') return /\bprinter/i.test(text);
+      if (kw === 'toner') return /\btoner/i.test(text);
+      if (kw === 'cartridge' || kw === 'catridge') return /\bc(a|ar)tridge/i.test(text);
+      if (kw === 'ink') return /\bink(jet|s)?\b/i.test(text);
+      return text.includes(kw);
+    }
+
+    function updateCategoryCounts() {
+      const elAll = document.getElementById('badgeCountAll');
+      const elPrinter = document.getElementById('badgeCountPrinter');
+      const elToner = document.getElementById('badgeCountToner');
+      const elCartridge = document.getElementById('badgeCountCartridge');
+      const elInk = document.getElementById('badgeCountInk');
+
+      if (elAll) elAll.textContent = allBids.length;
+      if (elPrinter) elPrinter.textContent = allBids.filter(b => matchesKeywordFilter(b.category_name, 'printer')).length;
+      if (elToner) elToner.textContent = allBids.filter(b => matchesKeywordFilter(b.category_name, 'toner')).length;
+      if (elCartridge) elCartridge.textContent = allBids.filter(b => matchesKeywordFilter(b.category_name, 'cartridge')).length;
+      if (elInk) elInk.textContent = allBids.filter(b => matchesKeywordFilter(b.category_name, 'ink')).length;
+    }
+
     function setKeywordFilter(kw) {
       activeKwFilter = kw.toLowerCase();
       document.querySelectorAll('.filter-btn').forEach(btn => {
         if (btn.getAttribute('data-kw') === kw) {
-          btn.className = "filter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-red-600 text-white shadow-md shadow-red-600/30";
+          btn.className = "filter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-red-600 text-white shadow-md shadow-red-600/30 flex items-center gap-1.5";
         } else {
-          btn.className = "filter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700";
+          btn.className = "filter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center gap-1.5";
         }
       });
       filterBids();
@@ -818,7 +873,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
       let filtered = allBids;
       if (activeKwFilter) {
-        filtered = filtered.filter(b => (b.category_name || '').toLowerCase().includes(activeKwFilter));
+        filtered = filtered.filter(b => matchesKeywordFilter(b.category_name, activeKwFilter));
       }
       if (q) {
         filtered = filtered.filter(b => 

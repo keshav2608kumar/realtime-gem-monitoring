@@ -8,7 +8,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import init_db
+from app.database import init_db, SessionLocal
+from app.seeder import seed_initial_data
 from app.workers.scheduler import start_scheduler, stop_scheduler
 from app.routers import profiles, bids, alerts, health, devices
 from app.dashboard import DASHBOARD_HTML
@@ -28,6 +29,14 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 GeM BidWatch starting up...")
     init_db()
     logger.info("✅ Database initialized")
+    db = SessionLocal()
+    try:
+        seed_initial_data(db)
+        logger.info("✅ Database verified and auto-seeded")
+    except Exception as e:
+        logger.error(f"Seeding warning: {e}")
+    finally:
+        db.close()
     start_scheduler()
     yield
     logger.info("🛑 GeM BidWatch shutting down...")

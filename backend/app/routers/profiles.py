@@ -38,6 +38,7 @@ def get_profile(profile_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/{profile_id}", response_model=ProfileOut)
+@router.put("/{profile_id}", response_model=ProfileOut)
 def update_profile(profile_id: int, data: ProfileUpdate, db: Session = Depends(get_db)):
     p = db.query(Profile).filter(Profile.id == profile_id).first()
     if not p:

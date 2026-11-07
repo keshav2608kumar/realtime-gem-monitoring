@@ -60,8 +60,12 @@ def match_bid_to_profile(bid: BidCreate, profile: ProfileOut) -> MatchResult:
             if not kw_clean:
                 continue
 
-            # Use word boundary at beginning to avoid false positives like 'drinking' for 'ink'
-            pattern = re.compile(r'\b' + re.escape(kw_clean), re.IGNORECASE)
+            # Use word boundary at beginning to avoid false positives like 'drinking' for 'ink',
+            # and support common spelling variations like 'catridge'/'cartridge'.
+            if kw_clean in ("cartridge", "catridge"):
+                pattern = re.compile(r'\bc(?:a|ar)tridge', re.IGNORECASE)
+            else:
+                pattern = re.compile(r'\b' + re.escape(kw_clean), re.IGNORECASE)
             if pattern.search(category_text):
                 matched_keywords.append(kw_clean)
 

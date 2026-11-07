@@ -90,12 +90,32 @@ def run_scanner_cycle(session: GemSession, fetcher: GemFetcher):
                 all_normalized_bids.append(bid)
 
                 # Check keyword match
-                cat_lower = bid.category_name.lower()
+                cat_lower = (bid.category_name or "").lower()
                 matched = [kw for kw in keywords if kw in cat_lower]
                 if matched:
                     matched_tenders.append((bid, matched))
         except Exception as e:
             print(f"  ⚠️ Error polling city {city}: {e}")
+
+    # Targeted Keyword Catalog Polling (Toner, Cartridge, Printer, Ink)
+    print("\n🔍 Polling GeM Real-Time Catalog for Target Keywords...")
+    for kw in keywords:
+        try:
+            kw_raw_bids, num_found = fetcher.fetch_bids_by_keyword(keyword=kw, page=1)
+            print(f"  [{kw.upper()}]: Found {num_found} active tender(s) on GeM")
+            for raw in kw_raw_bids[:10]:
+                bid = normalize_bid(raw)
+                if not bid or bid.gem_bid_id in seen_ids:
+                    continue
+                seen_ids.add(bid.gem_bid_id)
+                all_normalized_bids.append(bid)
+
+                cat_lower = (bid.category_name or "").lower()
+                matched = [k for k in keywords if k in cat_lower]
+                if matched:
+                    matched_tenders.append((bid, matched))
+        except Exception as e:
+            print(f"  ⚠️ Error polling keyword {kw}: {e}")
 
     print(f"\n📊 Total Tenders Extracted: {len(all_normalized_bids)}")
     print(f"🚨 Matching Target Tenders: {len(matched_tenders)}")

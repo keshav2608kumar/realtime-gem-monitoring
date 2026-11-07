@@ -99,9 +99,15 @@ def test_list_profiles(client):
 def test_update_profile(client):
     r = client.post("/profiles/", json={"name": "P1", "state": "KARNATAKA"})
     pid = r.json()["id"]
-    r2 = client.patch(f"/profiles/{pid}", json={"name": "Updated"})
+    # Test PATCH
+    r2 = client.patch(f"/profiles/{pid}", json={"name": "Updated via PATCH"})
     assert r2.status_code == 200
-    assert r2.json()["name"] == "Updated"
+    assert r2.json()["name"] == "Updated via PATCH"
+    # Test PUT
+    r3 = client.put(f"/profiles/{pid}", json={"name": "Updated via PUT", "is_active": False})
+    assert r3.status_code == 200
+    assert r3.json()["name"] == "Updated via PUT"
+    assert r3.json()["is_active"] is False
 
 
 def test_delete_profile(client):

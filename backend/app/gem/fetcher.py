@@ -101,6 +101,31 @@ class GemFetcher:
 
         return all_bids
 
+    def fetch_bids_by_keyword(
+        self,
+        keyword: str,
+        page: int = 1,
+    ) -> tuple[List[RawBid], int]:
+        """
+        Fetch paginated bids matching a search keyword via GeM all-bids-data.
+        Returns (list_of_raw_bids, total_found).
+        """
+        payload = {
+            "page": page,
+            "param": {"searchBid": keyword, "searchType": "fullText"},
+            "filter": {"bidStatusType": "ongoing_bids", "byType": "all", "sort": "Bid-End-Date-Oldest"},
+        }
+        try:
+            data = self.session.post(ALL_BIDS_URL, payload)
+            resp = data.get("response", {}).get("response", {})
+            num_found = resp.get("numFound", 0)
+            docs = resp.get("docs", [])
+            raw_bids = [RawBid(doc, state="KARNATAKA", city="Bangalore Urban") for doc in docs]
+            return raw_bids, num_found
+        except Exception as e:
+            logger.warning(f"Error fetching keyword '{keyword}' page {page}: {e}")
+            return [], 0
+
     def get_cities_for_state(self, state: str) -> List[dict]:
         """Return list of cities for a state from GeM."""
         data = self.session.post_raw(CITY_LIST_URL, {"state_name": state})
