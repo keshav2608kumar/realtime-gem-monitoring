@@ -1011,7 +1011,25 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         }
 
         let locationMarkup = '';
-        if (b.pdf_delivery_city) {
+        if (isMismatch) {
+          const actualCity = b.extracted_city || b.pdf_delivery_city || 'Document Mismatch';
+          const actualState = b.extracted_state || b.pdf_delivery_state || '';
+          const actualPin = b.extracted_pincode || b.pdf_delivery_pincode || '';
+          const pinStr = actualPin ? `PIN: ${escapeHtml(actualPin)}` : '';
+          const pageRef = (b.pdf_page_number || b.pdf_consignee_page_number) ? `(p.${b.pdf_page_number || b.pdf_consignee_page_number})` : '';
+          const docBid = b.pdf_bid_number ? `Doc: ${escapeHtml(b.pdf_bid_number)}` : 'Doc ID Mismatch';
+
+          locationMarkup = `
+            <div class="inline-flex flex-col">
+              ${locBadge}
+              <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-red-950/50 text-red-300 border border-red-500/30 text-[11px] font-bold">
+                <i class="fa-solid fa-triangle-exclamation text-red-400 text-xs"></i>
+                <span>${escapeHtml(actualCity)}${actualState ? ', ' + escapeHtml(actualState) : ''}</span>
+              </span>
+              <span class="text-[10px] text-red-300/80 mt-0.5 font-mono">${escapeHtml(docBid)} • ${escapeHtml(pinStr)} ${escapeHtml(pageRef)}</span>
+            </div>
+          `;
+        } else if (b.pdf_delivery_city) {
           const pinStr = b.pdf_delivery_pincode ? ` - ${escapeHtml(b.pdf_delivery_pincode)}` : '';
           locationMarkup = `
             <div class="inline-flex flex-col">

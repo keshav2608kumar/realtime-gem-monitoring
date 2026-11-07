@@ -434,6 +434,13 @@ def synchronize_bid_with_pdf(
             bid.extracted_district = loc_evidence.district
             bid.extracted_state = loc_evidence.state
             bid.extracted_pincode = loc_evidence.pincode
+            # Overwrite pdf_delivery_* with true extracted evidence so fake data is wiped out
+            bid.pdf_delivery_address = loc_evidence.full_address
+            bid.pdf_delivery_city = loc_evidence.city
+            bid.pdf_delivery_district = loc_evidence.district
+            bid.pdf_delivery_state = loc_evidence.state
+            bid.pdf_delivery_pincode = loc_evidence.pincode
+            bid.pdf_page_number = loc_evidence.page_number
             bid.verification_reason = reason
             bid.verification_timestamp = now_utc
             try:
