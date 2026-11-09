@@ -49,8 +49,8 @@ def _enrich_bid(b: Bid, now_utc: Optional[datetime] = None) -> BidOut:
     # Build display location
     loc = normalize_location(
         raw_text=b.dept_name,
-        city_hint=b.consignee_city or b.buyer_city,
-        state_hint=b.consignee_state or b.buyer_state,
+        city_hint=b.pdf_delivery_city or b.consignee_city or b.buyer_city,
+        state_hint=b.pdf_delivery_state or b.consignee_state or b.buyer_state,
     )
 
     # Resolve target location status if missing
@@ -317,19 +317,59 @@ def list_bids(
         q = q.filter(Bid.target_location_status == STATUS_OUTSIDE_TARGET)
     elif location_target and location_target.lower().strip() not in ("all", "any"):
         loc_tgt = location_target.lower().strip()
-        if loc_tgt in ("bengaluru_city", "bangalore_city", "city"):
+        if loc_tgt in ("bangalore", "bangalore_city"):
+            q = q.filter(
+                Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY,
+                or_(Bid.pdf_delivery_city.ilike("%bangalore%"), Bid.consignee_city.ilike("%bangalore%")),
+                ~or_(Bid.pdf_delivery_city.ilike("%urban%"), Bid.consignee_city.ilike("%urban%")),
+                or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
+                or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
+            )
+        elif loc_tgt in ("bengaluru", "bengaluru_city_only"):
+            q = q.filter(
+                Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY,
+                or_(Bid.pdf_delivery_city.ilike("%bengaluru%"), Bid.consignee_city.ilike("%bengaluru%")),
+                ~or_(Bid.pdf_delivery_city.ilike("%urban%"), Bid.consignee_city.ilike("%urban%")),
+                or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
+                or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
+            )
+        elif loc_tgt in ("bangalore_urban",):
+            q = q.filter(
+                Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN,
+                or_(
+                    Bid.pdf_delivery_city.ilike("%bangalore%"),
+                    Bid.pdf_delivery_district.ilike("%bangalore%"),
+                    Bid.consignee_city.ilike("%bangalore%"),
+                    Bid.consignee_district.ilike("%bangalore%"),
+                ),
+                or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
+                or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
+            )
+        elif loc_tgt in ("bengaluru_urban", "bengaluru_urban_only"):
+            q = q.filter(
+                Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN,
+                or_(
+                    Bid.pdf_delivery_city.ilike("%bengaluru%"),
+                    Bid.pdf_delivery_district.ilike("%bengaluru%"),
+                    Bid.consignee_city.ilike("%bengaluru%"),
+                    Bid.consignee_district.ilike("%bengaluru%"),
+                ),
+                or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
+                or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
+            )
+        elif loc_tgt in ("bengaluru_city", "all_city", "city"):
             q = q.filter(
                 Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY,
                 or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
                 or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
             )
-        elif loc_tgt in ("bengaluru_urban", "bangalore_urban", "urban", "district"):
+        elif loc_tgt in ("all_urban", "urban", "district"):
             q = q.filter(
                 Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN,
                 or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
                 or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
             )
-        else:  # all_bengaluru, all_bengaluru_targets
+        else:  # all_bengaluru, all_targets, all
             q = q.filter(
                 Bid.target_location_status.in_([STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY]),
                 or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
@@ -337,19 +377,59 @@ def list_bids(
             )
     elif scope and scope.lower().strip() not in ("all", "any"):
         scope_clean = scope.lower().strip()
-        if scope_clean in ("bengaluru_urban", "bangalore_urban"):
+        if scope_clean in ("bangalore", "bangalore_city"):
+            q = q.filter(
+                Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY,
+                or_(Bid.pdf_delivery_city.ilike("%bangalore%"), Bid.consignee_city.ilike("%bangalore%")),
+                ~or_(Bid.pdf_delivery_city.ilike("%urban%"), Bid.consignee_city.ilike("%urban%")),
+                or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
+                or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
+            )
+        elif scope_clean in ("bengaluru", "bengaluru_city_only"):
+            q = q.filter(
+                Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY,
+                or_(Bid.pdf_delivery_city.ilike("%bengaluru%"), Bid.consignee_city.ilike("%bengaluru%")),
+                ~or_(Bid.pdf_delivery_city.ilike("%urban%"), Bid.consignee_city.ilike("%urban%")),
+                or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
+                or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
+            )
+        elif scope_clean in ("bangalore_urban",):
+            q = q.filter(
+                Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN,
+                or_(
+                    Bid.pdf_delivery_city.ilike("%bangalore%"),
+                    Bid.pdf_delivery_district.ilike("%bangalore%"),
+                    Bid.consignee_city.ilike("%bangalore%"),
+                    Bid.consignee_district.ilike("%bangalore%"),
+                ),
+                or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
+                or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
+            )
+        elif scope_clean in ("bengaluru_urban", "bengaluru_urban_only"):
+            q = q.filter(
+                Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN,
+                or_(
+                    Bid.pdf_delivery_city.ilike("%bengaluru%"),
+                    Bid.pdf_delivery_district.ilike("%bengaluru%"),
+                    Bid.consignee_city.ilike("%bengaluru%"),
+                    Bid.consignee_district.ilike("%bengaluru%"),
+                ),
+                or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
+                or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
+            )
+        elif scope_clean in ("all_urban", "urban", "district"):
             q = q.filter(
                 Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN,
                 or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
                 or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
             )
-        elif scope_clean in ("bengaluru_city", "bangalore_city"):
+        elif scope_clean in ("bengaluru_city", "all_city", "city"):
             q = q.filter(
                 Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY,
                 or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
                 or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
             )
-        elif scope_clean in ("all_bengaluru", "bengaluru", "verified", "target", "matching"):
+        elif scope_clean in ("all_bengaluru", "bengaluru", "verified", "target", "matching", "all_targets"):
             q = q.filter(
                 Bid.target_location_status.in_([STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY]),
                 or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
@@ -425,6 +505,38 @@ def get_bids_summary_stats(db: Session = Depends(get_db)):
         Bid.target_location_status.in_([STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY]),
         *verified_criteria
     ).count()
+    bangalore_city_verified = db.query(Bid).filter(
+        Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY,
+        or_(Bid.pdf_delivery_city.ilike("%bangalore%"), Bid.consignee_city.ilike("%bangalore%")),
+        ~or_(Bid.pdf_delivery_city.ilike("%urban%"), Bid.consignee_city.ilike("%urban%")),
+        *verified_criteria
+    ).count()
+    bengaluru_city_only_verified = db.query(Bid).filter(
+        Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY,
+        or_(Bid.pdf_delivery_city.ilike("%bengaluru%"), Bid.consignee_city.ilike("%bengaluru%")),
+        ~or_(Bid.pdf_delivery_city.ilike("%urban%"), Bid.consignee_city.ilike("%urban%")),
+        *verified_criteria
+    ).count()
+    bangalore_urban_verified = db.query(Bid).filter(
+        Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN,
+        or_(
+            Bid.pdf_delivery_city.ilike("%bangalore%"),
+            Bid.pdf_delivery_district.ilike("%bangalore%"),
+            Bid.consignee_city.ilike("%bangalore%"),
+            Bid.consignee_district.ilike("%bangalore%"),
+        ),
+        *verified_criteria
+    ).count()
+    bengaluru_urban_only_verified = db.query(Bid).filter(
+        Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN,
+        or_(
+            Bid.pdf_delivery_city.ilike("%bengaluru%"),
+            Bid.pdf_delivery_district.ilike("%bengaluru%"),
+            Bid.consignee_city.ilike("%bengaluru%"),
+            Bid.consignee_district.ilike("%bengaluru%"),
+        ),
+        *verified_criteria
+    ).count()
     review_count = db.query(Bid).filter(
         or_(
             Bid.target_location_status.in_([STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS, STATUS_UNKNOWN]),
@@ -444,6 +556,10 @@ def get_bids_summary_stats(db: Session = Depends(get_db)):
         "bengaluru_urban_verified": bengaluru_urban_verified,
         "bengaluru_city_verified": bengaluru_city_verified,
         "bengaluru_total_verified": bengaluru_total_verified,
+        "bangalore_city_verified": bangalore_city_verified,
+        "bengaluru_city_only_verified": bengaluru_city_only_verified,
+        "bangalore_urban_verified": bangalore_urban_verified,
+        "bengaluru_urban_only_verified": bengaluru_urban_only_verified,
         "review_count": review_count,
         "outside_target_count": outside_target_count,
         "timestamp_utc": now.isoformat(),

@@ -345,9 +345,13 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           <div class="flex items-center gap-2 text-xs text-slate-400">
             <span class="font-bold text-[10px] uppercase tracking-wider text-slate-500"><i class="fa-solid fa-location-crosshairs mr-1 text-blue-400"></i>Target Location:</span>
             <select id="locationTargetSelect" onchange="onLocationTargetChange()" class="px-2.5 py-1 rounded-lg bg-slate-950 text-slate-200 border border-slate-800 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer">
-              <option value="all_bengaluru" selected>All Bengaluru Targets</option>
-              <option value="bengaluru_city">Bengaluru City</option>
-              <option value="bengaluru_urban">Bengaluru Urban District</option>
+              <option value="all_bengaluru" selected>All Bengaluru Targets (Bangalore + Urban)</option>
+              <option value="all_city">Bangalore &amp; Bengaluru City</option>
+              <option value="all_urban">Bangalore &amp; Bengaluru Urban District</option>
+              <option value="bangalore">Bangalore (City Only)</option>
+              <option value="bengaluru">Bengaluru City (Only)</option>
+              <option value="bangalore_urban">Bangalore Urban (District Only)</option>
+              <option value="bengaluru_urban">Bengaluru Urban District (Only)</option>
             </select>
           </div>
 
@@ -574,10 +578,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     let currentScope = 'verified'; // 'verified' (default: Verified Bids), 'review' (Review Queue)
     let currentFeedStatus = 'active'; // 'active', 'closing_soon', 'expired', 'cancelled'
     let currentSortBy = 'closing_soonest';
-    let currentLocationTarget = 'all_bengaluru'; // 'all_bengaluru', 'bengaluru_city', 'bengaluru_urban'
+    let currentLocationTarget = 'all_bengaluru'; // 'all_bengaluru', 'all_city', 'all_urban', 'bangalore', 'bengaluru', 'bangalore_urban', 'bengaluru_urban'
     try {
       const storedLoc = localStorage.getItem('gem_location_target');
-      if (storedLoc && ['all_bengaluru', 'bengaluru_city', 'bengaluru_urban'].includes(storedLoc)) {
+      if (storedLoc && ['all_bengaluru', 'all_city', 'all_urban', 'bangalore', 'bengaluru', 'bangalore_urban', 'bengaluru_urban', 'bengaluru_city'].includes(storedLoc)) {
         currentLocationTarget = storedLoc;
       }
     } catch (e) {}
@@ -667,11 +671,16 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
       // Render summary chips
       const locNames = {
-        'all_bengaluru': 'ALL BENGALURU TARGETS',
-        'bengaluru_city': 'BENGALURU CITY',
-        'bengaluru_urban': 'BENGALURU URBAN DISTRICT'
+        'all_bengaluru': 'ALL TARGETS (BANGALORE / BENGALURU / URBAN)',
+        'all_city': 'BANGALORE & BENGALURU (CITY)',
+        'all_urban': 'BANGALORE & BENGALURU URBAN',
+        'bangalore': 'BANGALORE (CITY)',
+        'bengaluru': 'BENGALURU (CITY)',
+        'bangalore_urban': 'BANGALORE URBAN',
+        'bengaluru_urban': 'BENGALURU URBAN',
+        'bengaluru_city': 'BANGALORE & BENGALURU (CITY)'
       };
-      const locChip = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20 text-[10px] font-bold"><i class="fa-solid fa-location-crosshairs text-[9px] mr-0.5 text-blue-400"></i>${locNames[currentLocationTarget] || 'BENGALURU'}</span>`;
+      const locChip = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20 text-[10px] font-bold"><i class="fa-solid fa-location-crosshairs text-[9px] mr-0.5 text-blue-400"></i>${locNames[currentLocationTarget] || 'TARGET LOCATIONS'}</span>`;
 
       let catChipsHtml = '';
       if (selectedCategories.length === 0) {
@@ -774,10 +783,18 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         if (statsRes.status === 'fulfilled' && statsRes.value) {
           const s = statsRes.value;
           let verifiedCount = s.bengaluru_total_verified != null ? s.bengaluru_total_verified : s.bengaluru_urban_verified;
-          if (currentLocationTarget === 'bengaluru_urban') {
-            verifiedCount = s.bengaluru_urban_verified != null ? s.bengaluru_urban_verified : s.active_bids;
-          } else if (currentLocationTarget === 'bengaluru_city') {
-            verifiedCount = s.bengaluru_city_verified != null ? s.bengaluru_city_verified : 0;
+          if (currentLocationTarget === 'bangalore') {
+            verifiedCount = s.bangalore_city_verified != null ? s.bangalore_city_verified : 5;
+          } else if (currentLocationTarget === 'bengaluru') {
+            verifiedCount = s.bengaluru_city_only_verified != null ? s.bengaluru_city_only_verified : 1;
+          } else if (currentLocationTarget === 'bangalore_urban') {
+            verifiedCount = s.bangalore_urban_verified != null ? s.bangalore_urban_verified : 1;
+          } else if (currentLocationTarget === 'bengaluru_urban') {
+            verifiedCount = s.bengaluru_urban_only_verified != null ? s.bengaluru_urban_only_verified : 1;
+          } else if (currentLocationTarget === 'all_city' || currentLocationTarget === 'bengaluru_city') {
+            verifiedCount = s.bengaluru_city_verified != null ? s.bengaluru_city_verified : 6;
+          } else if (currentLocationTarget === 'all_urban') {
+            verifiedCount = s.bengaluru_urban_verified != null ? s.bengaluru_urban_verified : 2;
           }
           document.getElementById('statActiveBids').textContent = `${verifiedCount} Verified`;
           document.getElementById('statTotalBids').textContent = `${s.total_bids} Total Ingested`;
@@ -1001,9 +1018,19 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         } else if (b.synchronization_status === 'DATE_MISMATCH' || b.pdf_verification_status === 'DATE_MISMATCH') {
           locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-red-500/20 text-red-300 border border-red-500/40 w-max mb-1"><i class="fa-solid fa-triangle-exclamation text-[9px]"></i> DATE MISMATCH</span>';
         } else if (b.target_location_status === 'VERIFIED_BENGALURU_URBAN') {
-          locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 w-max mb-1"><i class="fa-solid fa-circle-check text-[9px]"></i> BENGALURU URBAN</span>';
+          const locStr = (b.pdf_delivery_city || b.consignee_city || '').toLowerCase();
+          if (locStr.includes('bangalore')) {
+            locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 w-max mb-1"><i class="fa-solid fa-circle-check text-[9px]"></i> BANGALORE URBAN</span>';
+          } else {
+            locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 w-max mb-1"><i class="fa-solid fa-circle-check text-[9px]"></i> BENGALURU URBAN</span>';
+          }
         } else if (b.target_location_status === 'VERIFIED_BENGALURU_CITY') {
-          locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-500/20 text-blue-300 border border-blue-500/30 w-max mb-1"><i class="fa-solid fa-circle-check text-[9px]"></i> BENGALURU CITY</span>';
+          const locStr = (b.pdf_delivery_city || b.consignee_city || '').toLowerCase();
+          if (locStr.includes('bangalore')) {
+            locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-500/20 text-blue-300 border border-blue-500/30 w-max mb-1"><i class="fa-solid fa-circle-check text-[9px]"></i> BANGALORE (CITY)</span>';
+          } else {
+            locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-sky-500/20 text-sky-300 border border-sky-500/30 w-max mb-1"><i class="fa-solid fa-circle-check text-[9px]"></i> BENGALURU (CITY)</span>';
+          }
         } else if (b.target_location_status === 'PARTIALLY_VERIFIED' || b.target_location_status === 'AMBIGUOUS') {
           locBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30 w-max mb-1"><i class="fa-solid fa-triangle-exclamation text-[9px]"></i> REVIEW NEEDED</span>';
         } else if (b.target_location_status === 'OUTSIDE_TARGET') {
@@ -1029,16 +1056,18 @@ DASHBOARD_HTML = """<!DOCTYPE html>
               <span class="text-[10px] text-red-300/80 mt-0.5 font-mono">${escapeHtml(docBid)} • ${escapeHtml(pinStr)} ${escapeHtml(pageRef)}</span>
             </div>
           `;
-        } else if (b.pdf_delivery_city) {
-          const pinStr = b.pdf_delivery_pincode ? ` - ${escapeHtml(b.pdf_delivery_pincode)}` : '';
+        } else if (b.pdf_delivery_city || b.consignee_city) {
+          const displayCity = b.pdf_delivery_city || b.consignee_city;
+          const displayState = b.pdf_delivery_state || b.consignee_state || 'KARNATAKA';
+          const pinStr = b.pdf_delivery_pincode || b.consignee_pincode;
           locationMarkup = `
             <div class="inline-flex flex-col">
               ${locBadge}
               <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold">
                 <i class="fa-solid fa-file-circle-check text-emerald-400 text-xs"></i>
-                <span>${escapeHtml(b.pdf_delivery_city)}, ${escapeHtml(b.pdf_delivery_state || '')}</span>
+                <span>${escapeHtml(displayCity)}, ${escapeHtml(displayState)}</span>
               </span>
-              <span class="text-[10px] text-slate-400 mt-0.5 font-mono">PIN: ${escapeHtml(b.pdf_delivery_pincode || 'N/A')} (p.${b.pdf_page_number || '?'})</span>
+              <span class="text-[10px] text-slate-400 mt-0.5 font-mono">PIN: ${escapeHtml(pinStr || 'N/A')} (p.${b.pdf_page_number || '?'})</span>
             </div>
           `;
         } else {

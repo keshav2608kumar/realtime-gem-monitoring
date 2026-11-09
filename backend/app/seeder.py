@@ -126,9 +126,9 @@ def seed_initial_data(db: Session):
                     existing.corrigendum_doc_url = corr_url
                     existing.date_source = date_src
                     existing.bid_status = bid_status
-                    existing.consignee_city = loc.city
-                    existing.consignee_state = loc.state
-                    existing.consignee_district = loc.district
+                    existing.consignee_city = b.get("consignee_city") or loc.city
+                    existing.consignee_state = b.get("consignee_state") or loc.state
+                    existing.consignee_district = b.get("consignee_district") or loc.district
                     existing.location_verification_status = loc.confidence
                     existing.data_source_classification = "IMPORTED"
                     existing.bid_url = b.get("bid_url")
@@ -185,9 +185,9 @@ def seed_initial_data(db: Session):
                         corrigendum_doc_url=corr_url,
                         date_source=date_src,
                         bid_status=bid_status,
-                        consignee_state=loc.state,
-                        consignee_city=loc.city,
-                        consignee_district=loc.district,
+                        consignee_state=b.get("consignee_state") or loc.state,
+                        consignee_city=b.get("consignee_city") or loc.city,
+                        consignee_district=b.get("consignee_district") or loc.district,
                         raw_location_text=loc.raw_text,
                         location_verification_status=loc.confidence,
                         target_location_status=b.get("target_location_status") or loc.target_status or "UNKNOWN",

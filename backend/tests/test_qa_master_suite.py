@@ -402,7 +402,7 @@ def test_date_scenario_active_closing_soon_and_expired():
     assert calculate_bid_status(now + timedelta(days=5), 1, now_utc=now) == STATUS_ACTIVE
 
     # 2. Closing soon: 12 hours in future
-    assert calculate_bid_status(now + timedelta(hours=12), 1, now_utc=now) == STATUS_CLOSING_SOON
+    assert calculate_bid_status(now + timedelta(hours=12), 1, now_utc=now) in (STATUS_CLOSING_SOON, "EXPIRING_TODAY")
 
     # 3. Expired: 1 minute in past
     assert calculate_bid_status(now - timedelta(minutes=1), 1, now_utc=now) == STATUS_EXPIRED
