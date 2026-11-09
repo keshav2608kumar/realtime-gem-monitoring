@@ -63,7 +63,7 @@ def run_scanner_cycle(session: GemSession, fetcher: GemFetcher):
     print(f"🔍 GeM Scan Cycle Started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("="*65)
 
-    cities = ["BANGALORE", "Bangalore Urban", "BENGALURU URBAN", "Bengaluru"]
+    cities = ["BANGALORE", "Bangalore Urban", "BENGALURU URBAN", "Bengaluru", "Bangalore Rural", "BENGALURU RURAL"]
     keywords = ["toner", "cartridge", "printer", "ink", "scanner", "desktop", "laptop"]
     target_re = re.compile(r'\b(printer|toner|c(?:a|ar)tridge|ink(?:jet|s)?|mfp|scanner|desktop|laptop|workstation|personal\s*computer)\b', re.IGNORECASE)
 

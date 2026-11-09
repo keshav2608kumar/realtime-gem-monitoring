@@ -1,0 +1,16 @@
+app = "gem-cloud-scanner"
+primary_region = "bom"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  BACKEND_SYNC_URL = "https://realtime-gem-monitoring.onrender.com/bids/batch-sync"
+  SCANNER_SECRET = "gem_bidwatch_cloud_token_v1"
+  POLL_INTERVAL_SECONDS = "300"
+  GEM_MAX_PAGES = "10"
+  CLOUD_REGION = "fly-bom-mumbai"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

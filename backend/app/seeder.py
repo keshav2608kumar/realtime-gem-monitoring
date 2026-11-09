@@ -30,7 +30,7 @@ def seed_initial_data(db: Session):
             profile = Profile(
                 name="Bangalore - Toner & Printer",
                 state="KARNATAKA",
-                cities=["BANGALORE", "Bangalore Urban", "BENGALURU URBAN", "Bengaluru"],
+                cities=["BANGALORE", "Bangalore Urban", "BENGALURU URBAN", "Bengaluru", "Bangalore Rural", "BENGALURU RURAL"],
                 keywords=["toner", "cartridge", "printer", "ink"],
                 is_active=True,
                 poll_interval_seconds=300

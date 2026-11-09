@@ -16,6 +16,7 @@ from app.services.location_normalizer import (
     classify_bengaluru_urban,
     resolve_effective_bid_delivery_location,
     STATUS_VERIFIED_BENGALURU_URBAN,
+    STATUS_VERIFIED_BENGALURU_RURAL,
     STATUS_PARTIALLY_VERIFIED,
     STATUS_AMBIGUOUS,
     STATUS_OUTSIDE_TARGET,
@@ -34,11 +35,13 @@ def test_bengaluru_urban_classification_matrix():
         # (city, district, state, raw_text, expected_status)
         ("Bengaluru", "Bengaluru Urban", "KARNATAKA", None, STATUS_VERIFIED_BENGALURU_URBAN),
         ("Bangalore", "Bangalore Urban", "KARNATAKA", None, STATUS_VERIFIED_BENGALURU_URBAN),
+        ("Bengaluru", "Bengaluru Rural", "KARNATAKA", None, STATUS_VERIFIED_BENGALURU_RURAL),
+        ("Bangalore", "Bangalore Rural", "KARNATAKA", None, STATUS_VERIFIED_BENGALURU_RURAL),
         ("Bengaluru", "verified Bengaluru Urban district", "KARNATAKA", None, STATUS_VERIFIED_BENGALURU_URBAN),
+        ("Mysuru", "Mysuru", "KARNATAKA", None, STATUS_OUTSIDE_TARGET),
         ("Jodhpur", "Jodhpur", "RAJASTHAN", None, STATUS_OUTSIDE_TARGET),
         ("Dehradun", "Dehradun", "UTTARAKHAND", None, STATUS_OUTSIDE_TARGET),
         ("Patna", "Patna", "BIHAR", None, STATUS_OUTSIDE_TARGET),
-        ("Bengaluru", "Bengaluru Rural", "KARNATAKA", None, STATUS_OUTSIDE_TARGET),
         ("Bangalore", None, None, "Bangalore, district unknown", STATUS_PARTIALLY_VERIFIED),
         (None, None, None, None, STATUS_UNKNOWN),
     ]
@@ -51,7 +54,7 @@ def test_bengaluru_urban_classification_matrix():
 
 
 def test_rural_towns_strictly_rejected():
-    """Verify known Bengaluru Rural taluks/towns are strictly OUTSIDE_TARGET."""
+    """Verify known Bengaluru Rural taluks/towns are ACCEPTED into Complete Bengaluru Region."""
     rural_towns = [
         "Doddaballapur", "Nelamangala", "Devanahalli",
         "Hoskote", "Kanakapura", "Ramanagara", "Magadi"
@@ -60,24 +63,32 @@ def test_rural_towns_strictly_rejected():
         status, _, _, _, _ = classify_bengaluru_urban(
             city=town, state="KARNATAKA", raw_text=f"Delivery at {town} warehouse"
         )
-        assert status == STATUS_OUTSIDE_TARGET, f"Rural town {town} was not rejected as OUTSIDE_TARGET"
+        assert status == STATUS_VERIFIED_BENGALURU_RURAL, f"Rural town {town} should be accepted as VERIFIED_BENGALURU_RURAL"
+
+    # Non-target Karnataka cities must be strictly rejected
+    outside_ka_towns = ["Mysuru", "Hubli", "Dharwad", "Mangaluru", "Belagavi"]
+    for town in outside_ka_towns:
+        status, _, _, _, _ = classify_bengaluru_urban(
+            city=town, state="KARNATAKA", raw_text=f"Delivery at {town} warehouse"
+        )
+        assert status == STATUS_OUTSIDE_TARGET, f"Non-target town {town} was not rejected"
 
 
 def test_pincode_boundary_validation():
-    """Verify Indian postal PIN codes: Urban (560001-560110) vs Rural vs Outside."""
+    """Verify Indian postal PIN codes: Urban (560001-560110) vs Rural (561000-562999) vs Outside."""
     # Urban PINs
     urban_pins = ["560001", "560012", "560037", "560068", "560100", "560110"]
     for pin in urban_pins:
         status, _, _, _, _ = classify_bengaluru_urban(pincode=pin)
         assert status == STATUS_VERIFIED_BENGALURU_URBAN, f"Urban PIN {pin} failed"
 
-    # Rural PINs
+    # Rural PINs -> ACCEPTED in Complete Bengaluru Region
     rural_pins = ["562110", "562114", "561203"]
     for pin in rural_pins:
         status, _, _, _, _ = classify_bengaluru_urban(pincode=pin)
-        assert status == STATUS_OUTSIDE_TARGET, f"Rural PIN {pin} was not rejected"
+        assert status == STATUS_VERIFIED_BENGALURU_RURAL, f"Rural PIN {pin} should be accepted as VERIFIED_BENGALURU_RURAL"
 
-    # Other States PINs
+    # Other States PINs -> REJECTED
     outside_pins = ["342001", "248001", "800001", "110001"]
     for pin in outside_pins:
         status, _, _, _, _ = classify_bengaluru_urban(pincode=pin)

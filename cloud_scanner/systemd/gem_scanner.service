@@ -1,0 +1,21 @@
+[Unit]
+Description=GeM BidWatch 24/7 Cloud Scanner Worker
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/gem_bidwatch/cloud_scanner
+Environment="BACKEND_SYNC_URL=https://realtime-gem-monitoring.onrender.com/bids/batch-sync"
+Environment="SCANNER_SECRET=gem_bidwatch_cloud_token_v1"
+Environment="POLL_INTERVAL_SECONDS=300"
+Environment="GEM_MAX_PAGES=10"
+Environment="CLOUD_REGION=mumbai-vps-egress"
+ExecStart=/usr/bin/python3 /opt/gem_bidwatch/cloud_scanner/cloud_scanner.py
+Restart=always
+RestartSec=15
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -31,6 +31,7 @@ from app.models.bid import Bid
 from app.services.location_normalizer import (
     resolve_effective_bid_delivery_location,
     STATUS_VERIFIED_BENGALURU_URBAN,
+    STATUS_VERIFIED_BENGALURU_RURAL,
     STATUS_VERIFIED_BENGALURU_CITY,
     STATUS_PARTIALLY_VERIFIED,
     STATUS_AMBIGUOUS,
@@ -254,7 +255,7 @@ def synchronize_bid_with_pdf(
         not force
         and bid.original_pdf_checksum == doc_checksum
         and bid.synchronization_status in (STATUS_VERIFIED, SYNC_SYNCHRONIZED)
-        and bid.target_location_status in (STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY)
+        and bid.target_location_status in (STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_RURAL, STATUS_VERIFIED_BENGALURU_CITY)
     ):
         logger.info(f"Bid {bid.bid_number} PDF checksum unchanged ({doc_checksum[:8]}); cached verified.")
         return PdfSyncResult(
@@ -538,9 +539,9 @@ def synchronize_bid_with_pdf(
     }
     t_status, conf, eff_city, eff_dist, eff_state = resolve_effective_bid_delivery_location(bid_eval_dict)
 
-    # 10. Fail-Closed Gate: Is Location Genuinely Verified?
-    if t_status not in (STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY):
-        reason = f"OCR_UNCERTAIN: Delivery address '{loc_ext.full_address[:100]}' could not be definitively validated in Bengaluru Urban or City."
+    # 10. Fail-Closed Gate: Is Location Genuinely Verified in Complete Bengaluru Region?
+    if t_status not in (STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_RURAL, STATUS_VERIFIED_BENGALURU_CITY):
+        reason = f"OCR_UNCERTAIN: Delivery address '{loc_ext.full_address[:100]}' could not be definitively validated in Bengaluru Urban, Rural, or City."
         sync_status = STATUS_OCR_UNCERTAIN
     else:
         sync_status = STATUS_VERIFIED

@@ -24,6 +24,7 @@ from app.services.location_normalizer import (
     classify_bengaluru_urban,
     resolve_effective_bid_delivery_location,
     STATUS_VERIFIED_BENGALURU_URBAN,
+    STATUS_VERIFIED_BENGALURU_RURAL,
     STATUS_VERIFIED_BENGALURU_CITY,
     STATUS_PARTIALLY_VERIFIED,
     STATUS_AMBIGUOUS,
@@ -90,23 +91,24 @@ def test_scenario_4_bangalore_urban_district_accepted():
     assert dist == "Bengaluru Urban"
 
 
-# ─── SCENARIO 5: Bengaluru Rural -> REJECT ────────────────────────────────────
-def test_scenario_5_bengaluru_rural_rejected():
-    # Explicit Bengaluru Rural district
-    status, _, _, _, _ = classify_bengaluru_urban(
+# ─── SCENARIO 5: Bengaluru Rural -> ACCEPT ────────────────────────────────────
+def test_scenario_5_bengaluru_rural_accepted():
+    # Explicit Bengaluru Rural district -> ACCEPT
+    status, _, _, dist, _ = classify_bengaluru_urban(
         city="Bengaluru",
         district="Bengaluru Rural",
         state="KARNATAKA",
     )
-    assert status == STATUS_OUTSIDE_TARGET
+    assert status == STATUS_VERIFIED_BENGALURU_RURAL
+    assert dist == "Bengaluru Rural"
 
-    # Rural peripheral towns
+    # Rural peripheral towns -> ACCEPT in Bengaluru Rural
     for rural_town in ["Doddaballapur", "Nelamangala", "Devanahalli", "Hoskote"]:
         st, _, _, _, _ = classify_bengaluru_urban(
             city=rural_town,
             state="KARNATAKA",
         )
-        assert st == STATUS_OUTSIDE_TARGET, f"{rural_town} should be OUTSIDE_TARGET"
+        assert st == STATUS_VERIFIED_BENGALURU_RURAL, f"{rural_town} should be accepted in Bengaluru Rural"
 
 
 # ─── SCENARIO 6: Jodhpur -> REJECT ────────────────────────────────────────────

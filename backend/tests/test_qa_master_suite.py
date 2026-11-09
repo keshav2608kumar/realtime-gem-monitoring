@@ -21,6 +21,7 @@ from app.schemas import BidCreate
 from app.services.location_normalizer import (
     resolve_effective_bid_delivery_location,
     STATUS_VERIFIED_BENGALURU_URBAN,
+    STATUS_VERIFIED_BENGALURU_RURAL,
     STATUS_VERIFIED_BENGALURU_CITY,
     STATUS_PARTIALLY_VERIFIED,
     STATUS_AMBIGUOUS,
@@ -231,7 +232,7 @@ def test_pdf_scenario_original_and_revised_deadline_conflict():
     ),
     (
         {"pdf_delivery_city": "Nelamangala", "pdf_delivery_district": "Bengaluru Rural", "pdf_delivery_state": "KARNATAKA"},
-        STATUS_OUTSIDE_TARGET, "Bengaluru Rural", "Bengaluru Rural"
+        STATUS_VERIFIED_BENGALURU_RURAL, "Nelamangala", "Bengaluru Rural"
     ),
     (
         {"pdf_delivery_city": "Jodhpur", "pdf_delivery_district": "Jodhpur", "pdf_delivery_state": "RAJASTHAN"},

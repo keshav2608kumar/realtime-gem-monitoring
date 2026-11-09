@@ -27,17 +27,24 @@ class GemSession:
     SESSION_INIT_URL = f"{BASE_URL}/advance-search"
 
     def __init__(self):
+        import os
         self._csrf_token: Optional[str] = None
         self._last_refresh: float = 0
         self._ctx = ssl.create_default_context()
         self._ctx.check_hostname = False
-        self._ctx.check_hostname = False
         self._ctx.verify_mode = ssl.CERT_NONE
         self._cookie_jar = urllib.request.HTTPCookieProcessor()
-        self._opener = urllib.request.build_opener(
+        
+        self._proxy_url = os.environ.get("GEM_PROXY_URL") or os.environ.get("HTTP_PROXY") or os.environ.get("HTTPS_PROXY")
+        handlers = [
             self._cookie_jar,
             urllib.request.HTTPSHandler(context=self._ctx)
-        )
+        ]
+        if self._proxy_url:
+            logger.info(f"Using proxy for GeM session: {self._proxy_url}")
+            handlers.append(urllib.request.ProxyHandler({'http': self._proxy_url, 'https': self._proxy_url}))
+
+        self._opener = urllib.request.build_opener(*handlers)
         self._headers = {
             "User-Agent": (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "

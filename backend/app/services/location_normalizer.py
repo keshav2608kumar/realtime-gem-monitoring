@@ -8,24 +8,30 @@ from typing import Optional, Tuple, Dict
 from dataclasses import dataclass
 
 
-# ─── BENGALURU URBAN TARGET CONSTANTS & STATUSES ────────────────────────────
+# ─── COMPLETE BENGALURU REGION TARGET CONSTANTS & STATUSES ──────────────────
 TARGET_COUNTRY = "India"
 TARGET_STATE = "KARNATAKA"
+TARGET_DISTRICTS = {"Bengaluru Urban", "Bengaluru Rural", "Bangalore Urban", "Bangalore Rural"}
 TARGET_DISTRICT = "Bengaluru Urban"
 TARGET_CITY = "Bengaluru"
-TARGET_DISPLAY = "Bengaluru Urban, Karnataka"
+TARGET_DISPLAY = "Complete Bengaluru Region (Urban + Rural + City), Karnataka"
 
 # Exact required verification lifecycle statuses
 STATUS_VERIFIED_BENGALURU_URBAN = "VERIFIED_BENGALURU_URBAN"
+STATUS_VERIFIED_BENGALURU_RURAL = "VERIFIED_BENGALURU_RURAL"
 STATUS_VERIFIED_BENGALURU_CITY = "VERIFIED_BENGALURU_CITY"
 STATUS_PARTIALLY_VERIFIED = "PARTIALLY_VERIFIED"
 STATUS_AMBIGUOUS = "AMBIGUOUS"
 STATUS_OUTSIDE_TARGET = "OUTSIDE_TARGET"
 STATUS_UNKNOWN = "UNKNOWN"
 
-# Bengaluru Urban Postal PIN Code Range: 560001 - 560110
+# Bengaluru Region Postal PIN Code Ranges:
+# Bengaluru Urban PINs: 560001 - 560110
 BENGALURU_URBAN_PIN_MIN = 560001
 BENGALURU_URBAN_PIN_MAX = 560110
+# Bengaluru Rural PINs: 561203, 562110, 562114, 562123, 562164, etc. (561000 - 562999)
+BENGALURU_RURAL_PIN_MIN = 561000
+BENGALURU_RURAL_PIN_MAX = 562999
 
 # Known Bengaluru Rural / Peripheral taluks & towns
 BENGALURU_RURAL_TOWNS = {
@@ -329,15 +335,7 @@ def classify_bengaluru_urban(
     if not combined:
         return STATUS_UNKNOWN, 0.0, None, None, None
 
-    # 1. Explicit Bengaluru Rural rejection
-    if re.search(r"\b(?:bengaluru|bangalore)\s+rural\b", combined) or (district and "rural" in str(district).lower()):
-        return STATUS_OUTSIDE_TARGET, 0.0, "Bengaluru Rural", "Bengaluru Rural", "KARNATAKA"
-
-    for r_town in BENGALURU_RURAL_TOWNS:
-        if re.search(r"\b" + re.escape(r_town) + r"\b", combined) and not re.search(r"\burban\b", combined):
-            return STATUS_OUTSIDE_TARGET, 0.0, r_town.title(), "Bengaluru Rural", "KARNATAKA"
-
-    # 2. Check for explicit outside states and known outside cities
+    # 1. Check for explicit outside states and known outside cities (including non-target Karnataka districts)
     outside_states = [
         "rajasthan", "uttarakhand", "bihar", "delhi", "maharashtra", "uttar pradesh",
         "west bengal", "gujarat", "punjab", "haryana", "kerala", "tamil nadu",
@@ -355,7 +353,7 @@ def classify_bengaluru_urban(
     has_outside_city = any(re.search(r"\b" + re.escape(c) + r"\b", combined) for c in outside_cities)
     has_outside_state = any(re.search(r"\b" + re.escape(s) + r"\b", combined) for s in outside_states)
 
-    # If explicitly points to another location and has no Bangalore mention
+    # If explicitly points to another location and has no Bangalore mention -> OUTSIDE_TARGET (REJECT)
     if (has_outside_city or has_outside_state) and not re.search(r"\b(?:bengaluru|bangalore)\b", combined):
         out_state = None
         for s in outside_states:
@@ -364,11 +362,11 @@ def classify_bengaluru_urban(
                 break
         return STATUS_OUTSIDE_TARGET, 0.0, city, district, out_state or state
 
-    # If it has both an outside location and Bangalore without clear resolution -> AMBIGUOUS
+    # If it has both an outside location and Bangalore without clear resolution -> AMBIGUOUS (REVIEW)
     if has_outside_city and re.search(r"\b(?:bengaluru|bangalore)\b", combined):
         return STATUS_AMBIGUOUS, 0.35, "Bengaluru", "Ambiguous", "KARNATAKA"
 
-    # 3. Check Postal PIN Code
+    # 2. Check Postal PIN Code (Urban: 560001-560110, Rural: 561000-562999)
     if pincode:
         try:
             pin_digits = re.findall(r"\b([1-9][0-9]{5})\b", str(pincode))
@@ -376,14 +374,22 @@ def classify_bengaluru_urban(
                 pin_int = int(pin_digits[0])
                 if BENGALURU_URBAN_PIN_MIN <= pin_int <= BENGALURU_URBAN_PIN_MAX:
                     return STATUS_VERIFIED_BENGALURU_URBAN, 0.95, "Bengaluru", "Bengaluru Urban", "KARNATAKA"
-                elif 561000 <= pin_int <= 562999:
-                    return STATUS_OUTSIDE_TARGET, 0.0, "Bengaluru Rural", "Bengaluru Rural", "KARNATAKA"
+                elif BENGALURU_RURAL_PIN_MIN <= pin_int <= BENGALURU_RURAL_PIN_MAX:
+                    return STATUS_VERIFIED_BENGALURU_RURAL, 0.95, "Bengaluru Rural", "Bengaluru Rural", "KARNATAKA"
                 elif pin_int < 560000 or pin_int >= 600000:
                     return STATUS_OUTSIDE_TARGET, 0.0, city, district, state
         except Exception:
             pass
 
-    # 4. Explicit Bengaluru Urban district check
+    # 3. Explicit Bengaluru Rural district and peripheral taluk check -> ACCEPT (BENGALURU RURAL)
+    if re.search(r"\b(?:bengaluru|bangalore)\s+rural\b", combined) or (district and "rural" in str(district).lower()):
+        return STATUS_VERIFIED_BENGALURU_RURAL, 0.95, city or "Bengaluru Rural", "Bengaluru Rural", "KARNATAKA"
+
+    for r_town in BENGALURU_RURAL_TOWNS:
+        if re.search(r"\b" + re.escape(r_town) + r"\b", combined) and not re.search(r"\burban\b", combined):
+            return STATUS_VERIFIED_BENGALURU_RURAL, 0.90, r_town.title(), "Bengaluru Rural", "KARNATAKA"
+
+    # 4. Explicit Bengaluru Urban district check -> ACCEPT (BENGALURU URBAN)
     if (
         re.search(r"\b(?:bengaluru|bangalore)\s*urban\b", combined)
         or (district and "urban" in str(district).lower() and re.search(r"\b(?:bengaluru|bangalore)\b", combined))
@@ -392,7 +398,7 @@ def classify_bengaluru_urban(
     ):
         return STATUS_VERIFIED_BENGALURU_URBAN, 0.95, "Bengaluru", "Bengaluru Urban", "KARNATAKA"
 
-    # 5. Check 'district unknown' or generic Bangalore without urban validation -> REVIEW
+    # 5. Check 'district unknown' or generic Bangalore without urban/rural validation -> REVIEW (PARTIALLY_VERIFIED)
     if "district unknown" in combined or re.search(r"\bdistrict\s+unknown\b", combined):
         return STATUS_PARTIALLY_VERIFIED, 0.50, "Bengaluru", "District Unknown", "KARNATAKA"
 
@@ -462,7 +468,7 @@ def resolve_effective_bid_delivery_location(
             raw_text=valid_pdf_addr,
             pincode=pdf_pin,
         )
-        if st in (STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY, STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS):
+        if st in (STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_RURAL, STATUS_VERIFIED_BENGALURU_CITY, STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS):
             return st, conf, c, d, s
         elif st == STATUS_OUTSIDE_TARGET and any([pdf_city, pdf_state, pdf_pin]):
             return st, conf, c, d, s
@@ -479,7 +485,7 @@ def resolve_effective_bid_delivery_location(
             state=del_state,
             raw_text=del_addr,
         )
-        if st in (STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY, STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS):
+        if st in (STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_RURAL, STATUS_VERIFIED_BENGALURU_CITY, STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS):
             return st, conf, c, d, s
         elif st == STATUS_OUTSIDE_TARGET and any([del_city, del_state]):
             return st, conf, c, d, s

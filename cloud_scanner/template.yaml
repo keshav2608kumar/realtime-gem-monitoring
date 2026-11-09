@@ -1,0 +1,38 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: GeM BidWatch 24/7 Serverless Cloud Scanner in AWS Mumbai (ap-south-1) - 100% Free Tier
+
+Globals:
+  Function:
+    Timeout: 180
+    MemorySize: 256
+    Runtime: python3.12
+    Architectures:
+      - x86_64
+
+Resources:
+  GemCloudScannerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: lambda_function.lambda_handler
+      Description: 24/7 GeM Bid Scanner with domestic Indian egress IP
+      Environment:
+        Variables:
+          BACKEND_SYNC_URL: https://realtime-gem-monitoring.onrender.com/bids/batch-sync
+          SCANNER_SECRET: gem_bidwatch_cloud_token_v1
+          CLOUD_REGION: aws-ap-south-1-mumbai
+          GEM_MAX_PAGES: '10'
+      Events:
+        ScheduledScan:
+          Type: Schedule
+          Properties:
+            Schedule: rate(5 minutes)
+            Name: GemScanner5MinCron
+            Description: Triggers GeM portal scan every 5 minutes from Mumbai
+            Enabled: true
+
+Outputs:
+  GemCloudScannerFunctionArn:
+    Description: ARN of the deployed GeM Cloud Scanner Lambda function
+    Value: !GetAtt GemCloudScannerFunction.Arn

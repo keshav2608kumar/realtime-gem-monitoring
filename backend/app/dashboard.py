@@ -124,18 +124,18 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <div>
           <div class="flex items-center gap-2 flex-wrap">
             <span class="text-xs font-black uppercase tracking-wider text-slate-400">Target Location:</span>
-            <span class="px-2.5 py-0.5 rounded text-xs font-mono font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">Bengaluru Urban, Karnataka</span>
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-300 border border-blue-500/20 font-mono">Urban PINs: 560001 - 560110</span>
+            <span class="px-2.5 py-0.5 rounded text-xs font-mono font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">Complete Bengaluru Region (Urban + Rural + City)</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-300 border border-blue-500/20 font-mono">PINs: 560001 - 562164</span>
           </div>
           <p class="text-[11px] text-slate-400 mt-0.5">
-            Strict geographic filter active: Bids with delivery in Bengaluru Rural, other districts, or outside states are rejected or isolated in the Review Queue.
+            Strict geographic filter active: Bids with delivery in Bengaluru Urban or Bengaluru Rural are accepted. Outside districts (e.g. Mysuru) or outside states are rejected or isolated in the Review Queue.
           </p>
         </div>
       </div>
       <div class="flex items-center gap-2 self-end sm:self-center">
         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 text-[11px] font-black tracking-wide">
           <i class="fa-solid fa-shield-halved text-xs text-emerald-400"></i>
-          <span>BENGALURU URBAN VERIFIED</span>
+          <span>COMPLETE BENGALURU REGION VERIFIED</span>
         </span>
       </div>
     </div>
@@ -151,7 +151,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span>24/7 Monitoring</span>
           </p>
-          <p id="statHealthSubtitle" class="text-[10px] text-slate-500 mt-0.5">Bengaluru Urban Radar Active</p>
+          <p id="statHealthSubtitle" class="text-[10px] text-slate-500 mt-0.5">Complete Bengaluru Radar Active</p>
         </div>
         <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
           <i class="fa-solid fa-server"></i>
@@ -345,13 +345,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           <div class="flex items-center gap-2 text-xs text-slate-400">
             <span class="font-bold text-[10px] uppercase tracking-wider text-slate-500"><i class="fa-solid fa-location-crosshairs mr-1 text-blue-400"></i>Target Location:</span>
             <select id="locationTargetSelect" onchange="onLocationTargetChange()" class="px-2.5 py-1 rounded-lg bg-slate-950 text-slate-200 border border-slate-800 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer">
-              <option value="all_bengaluru" selected>All Bengaluru Targets (Bangalore + Urban)</option>
-              <option value="all_city">Bangalore &amp; Bengaluru City</option>
-              <option value="all_urban">Bangalore &amp; Bengaluru Urban District</option>
-              <option value="bangalore">Bangalore (City Only)</option>
-              <option value="bengaluru">Bengaluru City (Only)</option>
-              <option value="bangalore_urban">Bangalore Urban (District Only)</option>
-              <option value="bengaluru_urban">Bengaluru Urban District (Only)</option>
+              <option value="all_bengaluru" selected>All Bengaluru Targets (Urban + Rural + City)</option>
+              <option value="bengaluru_urban">Bengaluru Urban District</option>
+              <option value="bengaluru_rural">Bengaluru Rural District</option>
+              <option value="bengaluru_city">Bengaluru City</option>
             </select>
           </div>
 
@@ -671,14 +668,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
       // Render summary chips
       const locNames = {
-        'all_bengaluru': 'ALL TARGETS (BANGALORE / BENGALURU / URBAN)',
-        'all_city': 'BANGALORE & BENGALURU (CITY)',
-        'all_urban': 'BANGALORE & BENGALURU URBAN',
-        'bangalore': 'BANGALORE (CITY)',
-        'bengaluru': 'BENGALURU (CITY)',
-        'bangalore_urban': 'BANGALORE URBAN',
+        'all_bengaluru': 'ALL BENGALURU (URBAN + RURAL + CITY)',
         'bengaluru_urban': 'BENGALURU URBAN',
-        'bengaluru_city': 'BANGALORE & BENGALURU (CITY)'
+        'bengaluru_rural': 'BENGALURU RURAL',
+        'bengaluru_city': 'BENGALURU CITY'
       };
       const locChip = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20 text-[10px] font-bold"><i class="fa-solid fa-location-crosshairs text-[9px] mr-0.5 text-blue-400"></i>${locNames[currentLocationTarget] || 'TARGET LOCATIONS'}</span>`;
 

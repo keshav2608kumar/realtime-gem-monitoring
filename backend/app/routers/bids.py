@@ -18,7 +18,7 @@ from app.services.bid_status_service import (
 )
 from app.services.location_normalizer import (
     normalize_location, resolve_effective_bid_delivery_location,
-    STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY,
+    STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_RURAL, STATUS_VERIFIED_BENGALURU_CITY,
     STATUS_PARTIALLY_VERIFIED, STATUS_AMBIGUOUS, STATUS_OUTSIDE_TARGET, STATUS_UNKNOWN
 )
 from app.services.category_service import match_category, get_all_target_categories, CATEGORIES_BY_ID
@@ -345,15 +345,15 @@ def list_bids(
                 or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
                 or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
             )
-        elif loc_tgt in ("bengaluru_urban", "bengaluru_urban_only"):
+        elif loc_tgt in ("bengaluru_urban", "bengaluru_urban_only", "urban"):
             q = q.filter(
                 Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN,
-                or_(
-                    Bid.pdf_delivery_city.ilike("%bengaluru%"),
-                    Bid.pdf_delivery_district.ilike("%bengaluru%"),
-                    Bid.consignee_city.ilike("%bengaluru%"),
-                    Bid.consignee_district.ilike("%bengaluru%"),
-                ),
+                or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
+                or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
+            )
+        elif loc_tgt in ("bengaluru_rural", "bangalore_rural", "rural"):
+            q = q.filter(
+                Bid.target_location_status == STATUS_VERIFIED_BENGALURU_RURAL,
                 or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
                 or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
             )
@@ -363,7 +363,7 @@ def list_bids(
                 or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
                 or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
             )
-        elif loc_tgt in ("all_urban", "urban", "district"):
+        elif loc_tgt in ("all_urban", "district"):
             q = q.filter(
                 Bid.target_location_status == STATUS_VERIFIED_BENGALURU_URBAN,
                 or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
@@ -371,7 +371,11 @@ def list_bids(
             )
         else:  # all_bengaluru, all_targets, all
             q = q.filter(
-                Bid.target_location_status.in_([STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY]),
+                Bid.target_location_status.in_([
+                    STATUS_VERIFIED_BENGALURU_URBAN,
+                    STATUS_VERIFIED_BENGALURU_RURAL,
+                    STATUS_VERIFIED_BENGALURU_CITY,
+                ]),
                 or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
                 or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
             )
@@ -423,6 +427,12 @@ def list_bids(
                 or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
                 or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
             )
+        elif scope_clean in ("bengaluru_rural", "bangalore_rural", "rural"):
+            q = q.filter(
+                Bid.target_location_status == STATUS_VERIFIED_BENGALURU_RURAL,
+                or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
+                or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
+            )
         elif scope_clean in ("bengaluru_city", "all_city", "city"):
             q = q.filter(
                 Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY,
@@ -431,7 +441,11 @@ def list_bids(
             )
         elif scope_clean in ("all_bengaluru", "bengaluru", "verified", "target", "matching", "all_targets"):
             q = q.filter(
-                Bid.target_location_status.in_([STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY]),
+                Bid.target_location_status.in_([
+                    STATUS_VERIFIED_BENGALURU_URBAN,
+                    STATUS_VERIFIED_BENGALURU_RURAL,
+                    STATUS_VERIFIED_BENGALURU_CITY,
+                ]),
                 or_(Bid.synchronization_status == None, ~Bid.synchronization_status.in_(MISMATCH_SYNC_STATUSES)),
                 or_(Bid.pdf_verification_status == None, ~Bid.pdf_verification_status.in_(MISMATCH_SYNC_STATUSES)),
             )
@@ -501,8 +515,16 @@ def get_bids_summary_stats(db: Session = Depends(get_db)):
         Bid.target_location_status == STATUS_VERIFIED_BENGALURU_CITY,
         *verified_criteria
     ).count()
+    bengaluru_rural_verified = db.query(Bid).filter(
+        Bid.target_location_status == STATUS_VERIFIED_BENGALURU_RURAL,
+        *verified_criteria
+    ).count()
     bengaluru_total_verified = db.query(Bid).filter(
-        Bid.target_location_status.in_([STATUS_VERIFIED_BENGALURU_URBAN, STATUS_VERIFIED_BENGALURU_CITY]),
+        Bid.target_location_status.in_([
+            STATUS_VERIFIED_BENGALURU_URBAN,
+            STATUS_VERIFIED_BENGALURU_RURAL,
+            STATUS_VERIFIED_BENGALURU_CITY,
+        ]),
         *verified_criteria
     ).count()
     bangalore_city_verified = db.query(Bid).filter(
@@ -554,6 +576,7 @@ def get_bids_summary_stats(db: Session = Depends(get_db)):
         "active_bids": active,
         "expired_bids": expired,
         "bengaluru_urban_verified": bengaluru_urban_verified,
+        "bengaluru_rural_verified": bengaluru_rural_verified,
         "bengaluru_city_verified": bengaluru_city_verified,
         "bengaluru_total_verified": bengaluru_total_verified,
         "bangalore_city_verified": bangalore_city_verified,
