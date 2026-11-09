@@ -37,17 +37,6 @@ ssl_ctx = ssl.create_default_context()
 ssl_ctx.check_hostname = False
 ssl_ctx.verify_mode = ssl.CERT_NONE
 
-def play_local_alarm():
-    """Play loud local siren sound on Windows."""
-    try:
-        import winsound
-        for _ in range(5):
-            winsound.Beep(1200, 300)
-            winsound.Beep(800, 300)
-    except Exception:
-        print("\a" * 5)  # Terminal bell fallback
-
-
 def sync_bids_to_cloud(bids_list: list):
     """Uploads normalized bids to the Render cloud backend."""
     if not bids_list:
@@ -76,7 +65,7 @@ def run_scanner_cycle(session: GemSession, fetcher: GemFetcher):
 
     cities = ["BANGALORE", "Bangalore Urban", "BENGALURU URBAN", "Bengaluru"]
     keywords = ["toner", "cartridge", "printer", "ink", "scanner", "desktop", "laptop"]
-    target_re = re.compile(r'\b(printer|toner|c(?:a|ar)tridge|ink(?:jet|s)?|mfp|scanner|desktop|laptop)\b', re.IGNORECASE)
+    target_re = re.compile(r'\b(printer|toner|c(?:a|ar)tridge|ink(?:jet|s)?|mfp|scanner|desktop|laptop|workstation|personal\s*computer)\b', re.IGNORECASE)
 
     all_normalized_bids = []
     seen_ids = set()
@@ -85,13 +74,15 @@ def run_scanner_cycle(session: GemSession, fetcher: GemFetcher):
     # 1. Location-based search (Karnataka / Bangalore)
     for city in cities:
         try:
-            raw_bids = fetcher.fetch_all_pages(state="KARNATAKA", city=city, max_pages=3)
+            raw_bids = fetcher.fetch_all_pages(state="KARNATAKA", city=city, max_pages=10)
             print(f"  [{city}]: Found {len(raw_bids)} recent tender(s)")
             for raw in raw_bids:
                 bid = normalize_bid(raw)
                 if not bid or bid.gem_bid_id in seen_ids:
                     continue
-                # Only keep genuine printer/cartridge/toner/ink tenders!
+                # Skip software vulnerability scanner
+                if "vulnerability scanner" in (bid.category_name or "").lower():
+                    continue
                 if target_re.search(bid.category_name or ""):
                     seen_ids.add(bid.gem_bid_id)
                     all_normalized_bids.append(bid)
@@ -109,6 +100,8 @@ def run_scanner_cycle(session: GemSession, fetcher: GemFetcher):
                 bid = normalize_bid(raw)
                 if not bid or bid.gem_bid_id in seen_ids:
                     continue
+                if "vulnerability scanner" in (bid.category_name or "").lower():
+                    continue
                 if target_re.search(bid.category_name or ""):
                     seen_ids.add(bid.gem_bid_id)
                     all_normalized_bids.append(bid)
@@ -120,9 +113,9 @@ def run_scanner_cycle(session: GemSession, fetcher: GemFetcher):
     print(f"🚨 Matching Target Tenders: {len(matched_tenders)}")
 
     if matched_tenders:
-        print("\n" + "!"*65)
-        print("🚨🚨 EMERGENCY GeM BID MATCH DETECTED! 🚨🚨")
-        print("!"*65)
+        print("\n" + "="*65)
+        print("🎯 GeM BID MATCHES DETECTED:")
+        print("="*65)
         for bid, kws in matched_tenders:
             print(f"  TENDER NO: {bid.bid_number}")
             print(f"  CATEGORY:  {bid.category_name}")
@@ -130,7 +123,6 @@ def run_scanner_cycle(session: GemSession, fetcher: GemFetcher):
             print(f"  MATCHED:   {', '.join(kws)}")
             print(f"  PDF LINK:  {bid.bid_url}")
             print("-" * 65)
-        play_local_alarm()
 
     # Sync to Cloud
     print("\n☁️ Syncing with Cloud Dashboard...")
