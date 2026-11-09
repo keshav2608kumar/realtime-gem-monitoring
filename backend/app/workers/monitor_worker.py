@@ -103,8 +103,8 @@ def run_profile_poll(profile: Profile) -> dict:
 
         all_raw_bids = []
         for city in cities:
-            logger.info(f"[{profile.name}] Polling {profile.state}/{city or 'ALL'}")
-            raw_bids = fetcher.fetch_all_pages(state=profile.state, city=city, max_pages=5)
+            logger.info(f"[{profile.name}] Exhaustive Polling {profile.state}/{city or 'ALL'}")
+            raw_bids = fetcher.fetch_all_pages(state=profile.state, city=city, max_pages=None)
             all_raw_bids.extend(raw_bids)
 
         stats["bids_fetched"] = len(all_raw_bids)

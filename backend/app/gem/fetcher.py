@@ -74,29 +74,83 @@ class GemFetcher:
         self,
         state: str,
         city: str = "",
-        max_pages: int = 5,
+        max_pages: Optional[int] = None,
+        page_delay: float = 0.2,
     ) -> List[RawBid]:
         """
         Fetch pages of bids for a state+city.
-        Defaults to first 5 pages (50 most recent bids per city variant)
-        to respect server rate limits during 24/7 continuous polling.
+        When max_pages is None or 0, paginates exhaustively until ALL available
+        tenders for that location are retrieved (Zero-Miss Discovery).
         """
         import time
         all_bids = []
         page = 1
 
-        while page <= max_pages:
-            try:
-                bids, total = self.fetch_bids_by_location(state=state, city=city, page=page)
-                all_bids.extend(bids)
-                logger.info(f"  [{city or 'ALL'}] Page {page}: got {len(bids)} bids (total={total})")
+        while True:
+            if max_pages and page > max_pages:
+                break
 
-                if not bids or len(all_bids) >= total:
+            retries = 3
+            bids = []
+            total = 0
+            while retries > 0:
+                try:
+                    bids, total = self.fetch_bids_by_location(state=state, city=city, page=page)
+                    break
+                except Exception as e:
+                    retries -= 1
+                    if retries > 0:
+                        logger.warning(f"Retry fetching page {page} for {city or 'ALL'}: {e}. Retrying in 1s...")
+                        time.sleep(1.0)
+                    else:
+                        logger.warning(f"Error fetching page {page} for {city or 'ALL'}: {e}. Stopping pagination.")
+                        break
+
+            if not bids:
+                break
+
+            all_bids.extend(bids)
+            logger.debug(f"  [{city or 'ALL'}] Page {page}: got {len(bids)} bids (gathered={len(all_bids)}/{total})")
+
+            if len(all_bids) >= total:
+                break
+
+            page += 1
+            if page_delay > 0:
+                time.sleep(page_delay)
+
+        return all_bids
+
+    def fetch_all_keyword_pages(
+        self,
+        keyword: str,
+        max_pages: Optional[int] = None,
+        page_delay: float = 0.2,
+    ) -> List[RawBid]:
+        """
+        Fetch all pages of bids matching a search keyword via GeM all-bids-data.
+        Paginates exhaustively or up to max_pages.
+        """
+        import time
+        all_bids = []
+        page = 1
+
+        while True:
+            if max_pages and page > max_pages:
+                break
+
+            try:
+                bids, total = self.fetch_bids_by_keyword(keyword=keyword, page=page)
+                if not bids:
+                    break
+                all_bids.extend(bids)
+                if len(all_bids) >= total:
                     break
                 page += 1
-                time.sleep(0.5)  # Polite pacing between pages
+                if page_delay > 0:
+                    time.sleep(page_delay)
             except Exception as e:
-                logger.warning(f"Error fetching page {page} for {city or 'ALL'}: {e}. Continuing with gathered bids.")
+                logger.warning(f"Error fetching keyword '{keyword}' page {page}: {e}")
                 break
 
         return all_bids
