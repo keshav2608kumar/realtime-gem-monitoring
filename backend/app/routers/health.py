@@ -135,14 +135,15 @@ def get_production_observability(db: Session = Depends(get_db)):
         status_code = "EMPTY_RESULTS"
 
     cloud_region = os.environ.get("RENDER_REGION") or os.environ.get("CLOUD_REGION") or "singapore (render)"
+    latest_ts = (latest_bid.updated_at or latest_bid.first_seen_at).isoformat() if latest_bid and (latest_bid.updated_at or latest_bid.first_seen_at) else None
 
     return {
         "scanner_status": status_code,
         "cloud_region": cloud_region,
         "last_successful_source_fetch": last_health.checked_at.isoformat() if last_health and last_health.checked_at else None,
-        "last_successful_synchronization": latest_bid.updated_at.isoformat() if latest_bid and latest_bid.updated_at else None,
-        "last_successful_pdf_extraction": latest_bid.updated_at.isoformat() if latest_bid and latest_bid.pdf_page_number else None,
-        "last_successful_db_update": latest_bid.updated_at.isoformat() if latest_bid and latest_bid.updated_at else None,
+        "last_successful_synchronization": latest_ts,
+        "last_successful_pdf_extraction": latest_ts if latest_bid and latest_bid.pdf_page_number else None,
+        "last_successful_db_update": latest_ts,
         "worker_heartbeat": now.isoformat(),
         "next_scheduled_scan_seconds": 300,
         "bids_discovered_total": total_bids,
